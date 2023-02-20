@@ -1,10 +1,13 @@
 import os
 import sys
+import torch
 import torch.nn as nn
+import numpy as np
 
 import gym
-import stable_baseline3 as sb3
-from sb3 import PPO
+import stable_baselines3 as sb3
+from stable_baselines3 import PPO
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 import magical
 magical.register_envs()
@@ -14,9 +17,7 @@ class MAGICALNet(nn.Module):
     """Custom CNN for MAGICAL policies."""
     def __init__(self, observation_space, out_chans=256, width=2):
 
-        super().__init__(observation_space,
-                         out_chans,
-                         width)
+        super().__init__()
 
         w = width
         def conv_block(i, o, k, s, p, b=False):
@@ -54,9 +55,10 @@ class MAGICALNet(nn.Module):
 
 policy_kwargs = dict(
     features_extractor_class=MAGICALNet,
+    net_arch=dict(pi=[256, 256], vf=[256, 256])
 )
 
-env = gym.make('MoveToCorner-Demo-v0', debug_reward=True)
+env = gym.make('MoveToCorner-Demo-LoRes4E-v0', debug_reward=True)
 
-model = PPO("CnnPolicy", env, policy_kwargs=policy_kwargs, verbose=1)
-model.learn(10000)
+model = PPO("CnnPolicy", env, n_steps=100, policy_kwargs=policy_kwargs, verbose=1)
+model.learn(100000)
