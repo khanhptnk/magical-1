@@ -175,6 +175,10 @@ class BaseEnv(gym.Env, abc.ABC):
             self._entities.append(entity)
             entity.setup(self.renderer, self._space, self._phys_vars)
 
+    @property
+    def entities(self):
+        return self._entities
+
     def reset(self):
         self._episode_steps = 0
         # delete old entities/space
