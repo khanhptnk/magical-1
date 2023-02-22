@@ -22,11 +22,6 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
         self.rand_shape_type = rand_shape_type
         self.rand_poses = rand_poses
         self.debug_reward = debug_reward
-        if self.debug_reward:
-            warnings.warn(
-                "DEBUG REWARD ENABLED IN MOVE-TO-CORNER ENV! This reward is "
-                "ONLY intended for training RL algorithms during debugging, "
-                "so don't forget to disable it when benchmarking IL")
 
     def on_reset(self):
         print(self.debug_reward)
