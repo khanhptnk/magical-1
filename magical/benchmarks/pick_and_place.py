@@ -24,7 +24,6 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
         self.debug_reward = debug_reward
 
     def on_reset(self):
-        print(self.debug_reward)
         # make the robot
         robot_pos = np.asarray((0., 0.))
         robot_angle = 0.55 * math.pi
@@ -40,7 +39,6 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
             if self.rand_shape_colour:
                 shape_colour = self.rng.choice(
                     np.asarray(en.SHAPE_COLOURS, dtype='object'))
-                print(shape_colour)
             if self.rand_shape_type:
                 shape_type = self.rng.choice(
                     np.asarray(en.SHAPE_TYPES, dtype='object'))
@@ -54,9 +52,6 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
         self.add_entities(self.shapes)
         self.target_shape = self.shapes[0]
         self.target_pos = self.rng.rand(2) * 2 - 1
-
-        print(self.target_pos, self.target_shape.__dict__)
-
 
         if self.rand_poses:
             geom.pm_randomise_all_poses(
