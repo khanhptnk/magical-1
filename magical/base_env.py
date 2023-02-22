@@ -179,6 +179,14 @@ class BaseEnv(gym.Env, abc.ABC):
     def entities(self):
         return self._entities
 
+    @property
+    def robot(self):
+        return self._robot
+
+    @property
+    def episode_steps(self):
+        return self._episode_steps
+
     def reset(self):
         self._episode_steps = 0
         # delete old entities/space
@@ -266,6 +274,8 @@ class BaseEnv(gym.Env, abc.ABC):
         self._robot.set_action(action_flag)
         self._phys_steps_on_frame()
 
+        #self.render(mode='human')
+
         info = {}
         # always 0 reward (avoids training RL algs accidentally)
         reward = 0.0
@@ -277,7 +287,7 @@ class BaseEnv(gym.Env, abc.ABC):
         if self.max_episode_steps is not None:
             done = done or self._episode_steps >= self.max_episode_steps
         if done:
-            eval_score = self.score_on_end_of_traj()
+            reward = eval_score = self.score_on_end_of_traj()
             assert 0 <= eval_score <= 1, \
                 f'eval score {eval_score} out of range for env {self}'
             # These were my attempts at sneaking episode termination info
@@ -292,6 +302,7 @@ class BaseEnv(gym.Env, abc.ABC):
         info.update(eval_score=eval_score)
 
         obs_dict_u8 = self.render(mode='rgb_array')
+
 
         return obs_dict_u8, reward, done, info
 

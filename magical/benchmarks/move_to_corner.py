@@ -30,7 +30,8 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
 
     def on_reset(self):
         # make the robot
-        robot_pos = np.asarray((0.4, -0.0))
+        #robot_pos = np.asarray((0.4, -0.0))
+        robot_pos = np.random.rand(2) - 0.5
         robot_angle = 0.55 * math.pi
         robot = self._make_robot(robot_pos, robot_angle)
         self.add_entities([robot])
@@ -64,7 +65,8 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
                 rel_rot_limits=self.JITTER_ROT_BOUND)
 
     def score_on_end_of_traj(self):
-        robot_pos = np.asarray(self.__shape_ref.shape_body.position)
+        #robot_pos = np.asarray(self.__shape_ref.shape_body.position)
+        robot_pos = np.asarray(self.robot.robot_body.position)
         # target is top left
         dist = np.linalg.norm(np.asarray([-1.0, 1.0]) - robot_pos)
         succeed_dist = np.sqrt(2) / 2
