@@ -404,6 +404,25 @@ def register_envs():
                          phys_iter=10)
 
     # remember 100 frames is ~12.5s at 8fps
+    pap_ep_len = 80
+    pick_and_place_variants = [
+        ('magical.benchmarks.pick_and_place:PickAndPlaceEnv',
+         'PickAndPlace-Demo-v0', pap_ep_len, {
+             'rand_shape_colour': True,
+             'rand_shape_type': True,
+             'rand_poses': True,
+             'rand_dynamics': False,
+             'debug_reward': True
+         }),
+        ('magical.benchmarks.pick_and_place:PickAndPlaceEnv',
+         'PickAndPlace-Test-v0', pap_ep_len, {
+             'rand_shape_colour': True,
+             'rand_shape_type': True,
+             'rand_poses': True,
+             'rand_dynamics': False,
+         })
+    ]
+
     mtc_ep_len = 80
     move_to_corner_variants = [
         ('magical.benchmarks.move_to_corner:MoveToCornerEnv',
@@ -970,6 +989,7 @@ def register_envs():
         *match_regions_variants,
         *move_to_corner_variants,
         *move_to_region_variants,
+        *pick_and_place_variants,
     ]
 
     # register all the envs and record their names

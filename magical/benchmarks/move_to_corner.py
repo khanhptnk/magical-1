@@ -30,8 +30,7 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
 
     def on_reset(self):
         # make the robot
-        #robot_pos = np.asarray((0.4, -0.0))
-        robot_pos = np.random.rand(2) - 0.5
+        robot_pos = np.asarray((0.4, -0.0))
         robot_angle = 0.55 * math.pi
         robot = self._make_robot(robot_pos, robot_angle)
         self.add_entities([robot])

@@ -88,6 +88,9 @@ def main(record, env_name, print_spec):
         # render loop
         spf = 1.0 / env.fps
         while env.viewer.isopen:
+
+            time.sleep(0.2)
+
             if key_map[key.R]:
                 # drop traj and don't save
                 obs = env.reset()
