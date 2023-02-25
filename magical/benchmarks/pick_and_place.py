@@ -50,8 +50,17 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
             self.shapes.append(shape)
 
         self.add_entities(self.shapes)
-        self.target_shape = self.shapes[0]
-        self.target_pos = self.rng.rand(2) * 2 - 1
+        target_shape = self.shapes[0]
+        self.target_shape_type = target_shape.shape_type
+        self.target_colour_name = target_shape.colour_name
+        self.target_position = self.rng.rand(2) * 2 - 1
+
+        self.valid_target_shapes = []
+        for shape in self.shapes:
+            if shape.shape_type == self.target_shape_type and \
+               shape.colour_name == self.target_colour_name:
+                self.valid_target_shapes.append(shape)
+        self.target_shape = self.rng.choice(self.valid_target_shapes)
 
         if self.rand_poses:
             geom.pm_randomise_all_poses(
@@ -64,16 +73,20 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
                 #rel_rot_limits=self.JITTER_ROT_BOUND)
 
     def score_on_end_of_traj(self):
-        shape_pos = np.asarray(self.target_shape.shape_body.position)
-        # target is top left
-        dist = np.linalg.norm(self.target_pos - shape_pos)
-        #succeed_dist = np.sqrt(2) / 2
-        succeed_dist = self.SHAPE_RAD
-        furthest_dist = np.sqrt(2)
-        drange = (furthest_dist - succeed_dist)
-        score = min(1.0, max(0.0, furthest_dist - dist) / drange)
-        assert 0 <= score <= 1
-        return score
+        best_score = -1e9
+        for shape in self.valid_target_shapes:
+            target_shape = self.target_shape
+            shape_pos = np.asarray(target_shape.shape_body.position)
+            # target is top left
+            dist = np.linalg.norm(self.target_position - shape_pos)
+            #succeed_dist = np.sqrt(2) / 2
+            succeed_dist = self.SHAPE_RAD
+            furthest_dist = np.sqrt(2)
+            drange = (furthest_dist - succeed_dist)
+            score = min(1.0, max(0.0, furthest_dist - dist) / drange)
+            assert 0 <= score <= 1
+            best_score = max(best_score, score)
+        return best_score
 
     def step(self, *args, **kwargs):
         obs, rew, done, info = super().step(*args, **kwargs)
@@ -85,7 +98,7 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
     def debug_shaped_reward(self):
         shape_pos = np.asarray(self.target_shape.shape_body.position)
         # shape_pos[0] is meant to be 0, shape_pos[1] is meant to be 1
-        shape_to_target_dist = np.linalg.norm(shape_pos - self.target_pos)
+        shape_to_target_dist = np.linalg.norm(shape_pos - self.target_position)
         # encourage the robot to get close to the shape, and the shape to get
         # close to the goal
         robot_pos = np.asarray(self.robot.robot_body.position)

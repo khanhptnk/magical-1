@@ -12,6 +12,8 @@ from gym.spaces import Box, Dict
 from gym.wrappers import ResizeObservation
 import numpy as np
 
+from magical.benchmarks.pick_and_place import PickAndPlaceEnv
+
 __all__ = [
     'ALL_REGISTERED_ENVS'
     'DEMO_ENVS_TO_TEST_ENVS_MAP',
