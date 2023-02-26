@@ -8,11 +8,14 @@ from typing import Optional
 import cv2
 import gym
 from gym.envs.registration import load as cls_lookup
-from gym.spaces import Box, Dict
+from gym.spaces import Box, Dict, Discrete
 from gym.wrappers import ResizeObservation
 import numpy as np
 
+from stable_baselines3.common.preprocessing import is_image_space
+
 from magical.benchmarks.pick_and_place import PickAndPlaceEnv
+import magical.entities as en
 
 __all__ = [
     'ALL_REGISTERED_ENVS'
@@ -93,6 +96,8 @@ class FlattenFrameStack(gym.Wrapper):
         orig_space: Optional[gym.spaces.Box] = None
 
         def box_map(box):
+            if not is_image_space(box):
+                return box
             nonlocal orig_space
             if orig_space is None:
                 orig_space = box
@@ -110,9 +115,9 @@ class FlattenFrameStack(gym.Wrapper):
         self.depth_sum = sum(self.depth_by_key.values())
         new_low = np.repeat(orig_space.low, self.depth_sum, axis=-1)
         new_high = np.repeat(orig_space.high, self.depth_sum, axis=-1)
-        self.observation_space = Box(low=new_low,
-                                     high=new_high,
-                                     dtype=orig_space.dtype)
+
+        self.observation_space = env.observation_space
+        self.observation_space['past_obs'] = Box(low=new_low, high=new_high, dtype=orig_space.dtype)
 
     def _get_observation(self):
         # assume depth 1 dict
@@ -126,16 +131,20 @@ class FlattenFrameStack(gym.Wrapper):
     def step(self, action):
         observation, reward, done, info = self.env.step(action)
         for key, frame in observation.items():
-            self.frames_by_key[key].append(frame)
-        return self._get_observation(), reward, done, info
+            if key in ['allo', 'ego']:
+                self.frames_by_key[key].append(frame)
+        observation['past_obs'] = self._get_observation()
+        return observation, reward, done, info
 
     def reset(self, **kwargs):
         observation = self.env.reset(**kwargs)
         for key, frame in observation.items():
-            depth = self.depth_by_key[key]
-            for _ in range(depth):
-                self.frames_by_key[key].append(frame)
-        return self._get_observation()
+            if key in ['allo', 'ego']:
+                depth = self.depth_by_key[key]
+                for _ in range(depth):
+                    self.frames_by_key[key].append(frame)
+        observation['past_obs'] = self._get_observation()
+        return observation
 
 
 class ResizeDictObservation(gym.ObservationWrapper):
@@ -149,7 +158,12 @@ class ResizeDictObservation(gym.ObservationWrapper):
         assert all(x > 0 for x in res), res
         self.res = tuple(res)
 
+        self.original_shape = None
+
         def space_mapper(box):
+            if not is_image_space(box):
+                return box
+            self.original_shape = box.shape
             # copy channels from the box, but replace height/width (assumed to
             # be leading two dims)
             new_shape = self.res + box.shape[2:]
@@ -161,6 +175,9 @@ class ResizeDictObservation(gym.ObservationWrapper):
     def observation(self, observation):
         # use exactly the same resizing method as ResizeObservation in Gym
         def obs_mapper(box_obs):
+            # check if box_obs is an image of original shape
+            if isinstance(box_obs, int) or box_obs.ndim < 3:
+                return box_obs
             box_obs = cv2.resize(box_obs,
                                  self.res[::-1],
                                  interpolation=cv2.INTER_AREA)
@@ -168,7 +185,9 @@ class ResizeDictObservation(gym.ObservationWrapper):
                 box_obs = np.expand_dims(box_obs, -1)
             return box_obs
 
-        return _gym_tree_map(obs_mapper, observation)
+        observation = _gym_tree_map(obs_mapper, observation)
+
+        return observation
 
 
 class ChannelsFirst(gym.ObservationWrapper):
@@ -178,7 +197,8 @@ class ChannelsFirst(gym.ObservationWrapper):
         super().__init__(env)
 
         def space_mapper(box):
-            assert isinstance(box, gym.spaces.Box), box
+            if not is_image_space(box):
+                return box
             return gym.spaces.Box(low=self._rotate(box.low),
                                   high=self._rotate(box.high),
                                   dtype=box.dtype)
@@ -188,6 +208,8 @@ class ChannelsFirst(gym.ObservationWrapper):
 
     @staticmethod
     def _rotate(array):
+        if isinstance(array, int) or array.ndim < 3:
+            return array
         return np.moveaxis(array, -1, 0)
 
     def observation(self, observation):
@@ -233,7 +255,10 @@ def lores_ea_entry_point(env_cls_or_name,
                 ('allo', allo_frames),
                 ('ego', ego_frames),
             ]))
-        resize_env = ResizeObservation(stack_env, small_res)
+        if isinstance(stack_env.observation_space, Dict):
+            resize_env = ResizeDictObservation(stack_env, small_res)
+        else:
+            resize_env = ResizeObservation(stack_env, small_res)
         if channels_first:
             return ChannelsFirst(resize_env)
         return resize_env
@@ -268,6 +293,12 @@ DEFAULT_PREPROC_ENTRY_POINT_WRAPPERS = collections.OrderedDict([
     # stacking egocentric views from four ego/allo dicts & stacking them
     # together
     ('LoResCHW4E',
+     functools.partial(lores_ea_entry_point,
+                       small_res=(96, 96),
+                       allo_frames=0,
+                       ego_frames=4,
+                       channels_first=True)),
+    ('LoResCHW4A',
      functools.partial(lores_ea_entry_point,
                        small_res=(96, 96),
                        allo_frames=0,

@@ -1,6 +1,8 @@
 import math
 import warnings
+from collections import OrderedDict
 
+from gym.spaces import Box, Dict, Discrete
 from gym.utils import EzPickle
 import numpy as np
 
@@ -22,6 +24,9 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
         self.rand_shape_type = rand_shape_type
         self.rand_poses = rand_poses
         self.debug_reward = debug_reward
+        self.observation_space['target_type'] = Box(low=0, high=en.SHAPE_TYPES.shape[0], shape=(1,))
+        self.observation_space['target_colour'] = Box(low=0, high=en.SHAPE_COLOURS.shape[0], shape=(1,))
+        self.observation_space['target_position'] = Box(low=-1, high=1, shape=(2,))
 
     def on_reset(self):
         # make the robot
@@ -51,14 +56,15 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
 
         self.add_entities(self.shapes)
         target_shape = self.shapes[0]
-        self.target_shape_type = target_shape.shape_type
-        self.target_colour_name = target_shape.colour_name
+        self.target_type = target_shape.shape_type
+        self.target_type_id = en.SHAPE_TYPES.tolist().index(self.target_type)
+        self.target_colour = target_shape.colour_name
+        self.target_colour_id = en.SHAPE_COLOURS.tolist().index(self.target_colour)
         self.target_position = self.rng.rand(2) * 2 - 1
 
         self.valid_target_shapes = []
         for shape in self.shapes:
-            if shape.shape_type == self.target_shape_type and \
-               shape.colour_name == self.target_colour_name:
+            if shape.shape_type == self.target_type and shape.colour_name == self.target_colour:
                 self.valid_target_shapes.append(shape)
         self.target_shape = self.rng.choice(self.valid_target_shapes)
 
@@ -71,6 +77,13 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
                 rand_rot=True)
                 #rel_pos_linf_limits=self.JITTER_POS_BOUND,
                 #rel_rot_limits=self.JITTER_ROT_BOUND)
+
+    def reset(self):
+        obs = super().reset()
+        obs['target_type'] = self.target_type_id
+        obs['target_colour'] = self.target_colour_id
+        obs['target_position'] = self.target_position
+        return obs
 
     def score_on_end_of_traj(self):
         best_score = -1e9
@@ -93,6 +106,9 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
         if self.debug_reward:
             # dense reward for training RL
             rew = self.debug_shaped_reward()
+        obs['target_type'] = self.target_type_id
+        obs['target_colour'] = self.target_colour_id
+        obs['target_position'] = self.target_position
         return obs, rew, done, info
 
     def debug_shaped_reward(self):

@@ -225,9 +225,11 @@ policy = SimplePolicy(env.observation_space, env.action_space, [], MAGICALNet, {
 rollouts = rollout.rollout(
     expert,
     venv,
-    rollout.make_sample_until(min_timesteps=None, min_episodes=1000),
+    rollout.make_sample_until(min_timesteps=None, min_episodes=100),
     rng=rng,
 )
+
+print('skkdk')
 
 transitions = rollout.flatten_trajectories(rollouts)
 
