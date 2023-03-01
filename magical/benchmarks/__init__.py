@@ -301,9 +301,16 @@ DEFAULT_PREPROC_ENTRY_POINT_WRAPPERS = collections.OrderedDict([
     ('LoResCHW4A',
      functools.partial(lores_ea_entry_point,
                        small_res=(96, 96),
-                       allo_frames=0,
-                       ego_frames=4,
+                       allo_frames=4,
+                       ego_frames=0,
                        channels_first=True)),
+    ('LoResCHW1A',
+     functools.partial(lores_ea_entry_point,
+                       small_res=(96, 96),
+                       allo_frames=1,
+                       ego_frames=0,
+                       channels_first=True)),
+
 ])
 _ENV_NAME_RE = re.compile(
     r'^(?P<name_prefix>[^-]+)(?P<demo_test_spec>-(Demo|Test[^-]*))'
