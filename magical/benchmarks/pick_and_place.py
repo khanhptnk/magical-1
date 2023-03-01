@@ -68,7 +68,10 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
         self.target_colour = target_shape.colour_name
         self.target_type_id = np.asarray([en.SHAPE_TYPES.tolist().index(self.target_type)])
         self.target_colour_id = np.asarray([en.SHAPE_COLOURS.tolist().index(self.target_colour)])
-        self.goal_position = self.rng.rand(2) * 2 - 1
+        if self.config.one_goal:
+            self.goal_position = np.array([-1., 1.])
+        else:
+            self.goal_position = self.rng.rand(2) * 2 - 1
 
         self.valid_target_shapes = []
         for shape in self.shapes:
@@ -148,8 +151,13 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
         return shaping + self.score_on_end_of_traj()
         """
 
-        reward = -robot_to_shape_dist / 20
+        robot_to_goal_dist = np.linalg.norm(robot_pos - self.goal_position)
 
-        #reward = -shape_to_goal_dist / 5 - max(robot_to_shape_dist, 0.2) / 20
+        if self.config.task == 'go_to_goal':
+            reward = -robot_to_goal_dist / 20
+        elif self.config.task == 'pick':
+            reward = -robot_to_shape_dist / 20
+        else:
+            reward = -shape_to_goal_dist / 5 - max(robot_to_shape_dist, 0.2) / 20
 
         return reward

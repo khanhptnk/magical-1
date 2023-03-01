@@ -1,0 +1,15 @@
+Loading chipmunk for Linux (64bit) [/n/fs/nlp-kn5378/miniconda3/envs/magical/lib/python3.10/site-packages/pymunk/libchipmunk.so]
+Traceback (most recent call last):
+  File "/n/fs/nlp-kn5378/code/magical-1/train_rl.py", line 18, in <module>
+    import magical
+  File "/n/fs/nlp-kn5378/code/magical-1/magical/__init__.py", line 2, in <module>
+    from magical.benchmarks import (  # noqa: F401
+  File "/n/fs/nlp-kn5378/code/magical-1/magical/benchmarks/__init__.py", line 17, in <module>
+    from magical.benchmarks.pick_and_place import PickAndPlaceEnv
+  File "/n/fs/nlp-kn5378/code/magical-1/magical/benchmarks/pick_and_place.py", line 12, in <module>
+    from magical.base_env import BaseEnv, ez_init
+  File "/n/fs/nlp-kn5378/code/magical-1/magical/base_env.py", line 81
+    res_hw=(256, 256),
+    ^^^^^^
+SyntaxError: invalid syntax
+srun: error: node030: task 0: Exited with exit code 1

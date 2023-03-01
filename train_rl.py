@@ -14,11 +14,13 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.utils import set_random_seed
 
-
+import flags
 import magical
 magical.register_envs()
 import magical.entities as en
 from magical.models.impala import ImpalaCNNFeatureExtractor
+
+import utils
 
 BATCH_SIZE = 32
 OB_FEAT_DIM = 256
@@ -112,7 +114,9 @@ class MAGICALNet(nn.Module):
 
         #print(visual_feat.shape, colour_feat.shape, shape_feat.shape, position_feat.shape)
 
-        output = torch.cat([visual_feat, colour_feat, shape_feat, position_feat], dim=-1)
+        print
+
+        output = torch.cat([visual_feat, colour_feat*0, shape_feat*0, position_feat*0], dim=-1)
 
         return output
 
@@ -127,31 +131,29 @@ def make_env(rank, make_fn, seed=0):
 
 if __name__ == '__main__':
 
+    config_file, more_flags = flags.parse()
+    config = utils.setup(config_file, flags=more_flags)
+
+    train_env_id = 'PickAndPlace-Demo-LoResCHW4%s-v0' % ('A' if config.view == 'allo' else 'E')
+    test_env_id = train_env_id.replace('Demo', 'Test')
+
     test_env = DummyVecEnv(
-        [lambda: Monitor(gym.make('PickAndPlace-Test-LoResCHW4A-v0',
+        [lambda: Monitor(gym.make(test_env_id,
+            config=configm
             rand_shape_colour=False,
             rand_shape_type=False,
             debug_reward=True)) for _ in range(1)]
     )
+    test_env.seed(config.seed + config.num_cpu)
 
-    num_cpu = 8
-    make_train_env_fn = lambda: Monitor(gym.make('PickAndPlace-Demo-LoResCHW4A-v0',
+    make_train_env_fn = lambda: Monitor(gym.make(train_env_id,
+                                        config=config,
                                         rand_shape_colour=False,
                                         rand_shape_type=False,
                                         debug_reward=True)
     )
-
-    train_env = SubprocVecEnv([make_env(i, make_train_env_fn) for i in range(num_cpu)])
-
-    #exp_dir = 'experiments/pick_hard_hidden_512_ppo_1m'
-    #exp_dir = 'experiments/pick_with_true_direction_ppo_1m'
-
-    #exp_dir = 'experiments/pick_and_place_ppo_1m'
-
-    exp_dir = 'experiments/pick_impala_ppo_1m'
-
-    #pretrain_dir = 'experiments/pick_with_true_direction_ppo_1m'
-
+    train_env = SubprocVecEnv([make_env(i, make_train_env_fn, seed=config.seed)
+        for i in range(config.num_cpu)])
 
     feature_dim = OB_FEAT_DIM + TARGET_FEAT_DIM * 4
 
@@ -174,7 +176,6 @@ if __name__ == '__main__':
     model = PPO(
         "MultiInputPolicy",
         train_env,
-        learning_rate=5e-4,
         n_steps=80,
         batch_size=64,
         #n_epochs=3,
@@ -188,11 +189,11 @@ if __name__ == '__main__':
         #max_grad_norm=0.5,
         policy_kwargs=policy_kwargs,
         verbose=2,
-        tensorboard_log=exp_dir,
-        device=torch.device('cuda', 1))
+        tensorboard_log=config.exp_dir,
+        device=torch.device('cuda', 0))
 
-    eval_callback = EvalCallback(test_env, best_model_save_path=exp_dir,
-                                log_path=exp_dir, eval_freq=500,
+    eval_callback = EvalCallback(test_env, best_model_save_path=config.exp_dir,
+                                log_path=config.exp_dir, eval_freq=500,
                                 deterministic=True, render=False)
 
     #model.set_parameters('%s/best_model.zip' % exp_dir)

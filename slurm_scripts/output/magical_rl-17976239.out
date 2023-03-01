@@ -1,0 +1,10 @@
+Loading chipmunk for Linux (64bit) [/n/fs/nlp-kn5378/miniconda3/envs/magical/lib/python3.10/site-packages/pymunk/libchipmunk.so]
+pygame 2.1.3 (SDL 2.0.22, Python 3.10.9)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+Traceback (most recent call last):
+  File "/n/fs/nlp-kn5378/code/magical-1/train_rl.py", line 130, in <module>
+    args = flags.parse()
+  File "/n/fs/nlp-kn5378/code/magical-1/flags.py", line 12, in parse
+    return flags.config, jsonargparse.namespace_to_dict(flags)
+AttributeError: 'Namespace' object has no attribute 'config'
+srun: error: node030: task 0: Exited with exit code 1

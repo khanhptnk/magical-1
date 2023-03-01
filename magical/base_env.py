@@ -77,6 +77,7 @@ class BaseEnv(gym.Env, abc.ABC):
 
     def __init__(self,
                  *,
+                 config=None,
                  res_hw=(256, 256),
                  fps=20,
                  phys_steps=10,
@@ -85,6 +86,7 @@ class BaseEnv(gym.Env, abc.ABC):
                  rand_dynamics=False,
                  ego_view=True,
                  allo_view=True):
+        self.config = config
         self.phys_iter = phys_iter
         self.phys_steps = phys_steps
         self.fps = fps

@@ -1,0 +1,76 @@
+0:00:00 INFO: python -u train_rl.py -config configs/pick_ppo.yaml -name pick_ppo_17976264
+0:00:00 INFO: 2023-03-01 14:06:47.083270
+0:00:00 INFO: Write log to experiments/pick_ppo_17976264/run.log
+0:00:00 INFO: Config {
+    name: 'pick_ppo_17976264'
+    view: 'allo'
+    seed: 123
+    device_id: 0
+    config: 'configs/pick_ppo.yaml'
+    exp_root_dir: 'experiments'
+    exp_dir: 'experiments/pick_ppo_17976264'
+    random: <random.Random object at 0x6a58570>
+    start_time: 1677697607.081637
+}
+Loading chipmunk for Linux (64bit) [/n/fs/nlp-kn5378/miniconda3/envs/magical/lib/python3.10/site-packages/pymunk/libchipmunk.so]
+pygame 2.1.3 (SDL 2.0.22, Python 3.10.9)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+Using cuda:0 device
+Logging to experiments/pick_ppo_17976264/PPO_1
+/n/fs/nlp-kn5378/miniconda3/envs/magical/lib/python3.10/site-packages/stable_baselines3/common/callbacks.py:399: UserWarning: Training and eval env are not of the same type<stable_baselines3.common.vec_env.subproc_vec_env.SubprocVecEnv object at 0x7f9b6b4e51b0> != <stable_baselines3.common.vec_env.dummy_vec_env.DummyVecEnv object at 0x7f9b6b4e5240>
+  warnings.warn("Training and eval env are not of the same type" f"{self.training_env} != {self.eval_env}")
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 80       |
+|    ep_rew_mean     | -3.69    |
+| time/              |          |
+|    fps             | 60       |
+|    iterations      | 1        |
+|    time_elapsed    | 42       |
+|    total_timesteps | 2560     |
+---------------------------------
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 80          |
+|    ep_rew_mean          | -3.56       |
+| time/                   |             |
+|    fps                  | 53          |
+|    iterations           | 2           |
+|    time_elapsed         | 96          |
+|    total_timesteps      | 5120        |
+| train/                  |             |
+|    approx_kl            | 0.012039093 |
+|    clip_fraction        | 0.0638      |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -2.88       |
+|    explained_variance   | 0.0211      |
+|    learning_rate        | 0.0003      |
+|    loss                 | -0.0068     |
+|    n_updates            | 10          |
+|    policy_gradient_loss | -0.00539    |
+|    value_loss           | 0.0383      |
+-----------------------------------------
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 80          |
+|    ep_rew_mean          | -3.66       |
+| time/                   |             |
+|    fps                  | 51          |
+|    iterations           | 3           |
+|    time_elapsed         | 150         |
+|    total_timesteps      | 7680        |
+| train/                  |             |
+|    approx_kl            | 0.010236999 |
+|    clip_fraction        | 0.0636      |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -2.87       |
+|    explained_variance   | 0.17        |
+|    learning_rate        | 0.0003      |
+|    loss                 | -0.00611    |
+|    n_updates            | 20          |
+|    policy_gradient_loss | -0.00914    |
+|    value_loss           | 0.0383      |
+-----------------------------------------
+srun: Job step aborted: Waiting up to 92 seconds for job step to finish.
+slurmstepd: error: *** JOB 17976264 ON node030 CANCELLED AT 2023-03-01T14:11:03 ***
+slurmstepd: error: *** STEP 17976264.0 ON node030 CANCELLED AT 2023-03-01T14:11:03 ***

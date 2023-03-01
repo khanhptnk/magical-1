@@ -1,0 +1,118 @@
+0:00:00 INFO: python -u train_rl.py -config configs/pick_ppo.yaml -name pick_ppo_17976321
+0:00:00 INFO: 2023-03-01 15:18:29.264270
+0:00:00 INFO: Write log to experiments/pick_ppo_17976321/run.log
+0:00:00 INFO: Config {
+    name: 'pick_ppo_17976321'
+    view: 'ego'
+    seed: 123
+    device_id: 0
+    one_goal: 0
+    task: 'pick'
+    num_cpu: 32
+    config: 'configs/pick_ppo.yaml'
+    exp_root_dir: 'experiments'
+    exp_dir: 'experiments/pick_ppo_17976321'
+    random: <random.Random object at 0x7b03660>
+    start_time: 1677701909.2620378
+}
+Loading chipmunk for Linux (64bit) [/n/fs/nlp-kn5378/miniconda3/envs/magical/lib/python3.10/site-packages/pymunk/libchipmunk.so]
+pygame 2.1.3 (SDL 2.0.22, Python 3.10.9)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+Using cuda:0 device
+Logging to experiments/pick_ppo_17976321/PPO_1
+/n/fs/nlp-kn5378/miniconda3/envs/magical/lib/python3.10/site-packages/stable_baselines3/common/callbacks.py:399: UserWarning: Training and eval env are not of the same type<stable_baselines3.common.vec_env.subproc_vec_env.SubprocVecEnv object at 0x7fd033059780> != <stable_baselines3.common.vec_env.dummy_vec_env.DummyVecEnv object at 0x7fd033059240>
+  warnings.warn("Training and eval env are not of the same type" f"{self.training_env} != {self.eval_env}")
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 80       |
+|    ep_rew_mean     | -3.69    |
+| time/              |          |
+|    fps             | 18       |
+|    iterations      | 1        |
+|    time_elapsed    | 136      |
+|    total_timesteps | 2560     |
+---------------------------------
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 80           |
+|    ep_rew_mean          | -3.6         |
+| time/                   |              |
+|    fps                  | 25           |
+|    iterations           | 2            |
+|    time_elapsed         | 198          |
+|    total_timesteps      | 5120         |
+| train/                  |              |
+|    approx_kl            | 0.0135668125 |
+|    clip_fraction        | 0.0801       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -2.88        |
+|    explained_variance   | -0.0142      |
+|    learning_rate        | 0.0003       |
+|    loss                 | 0.00985      |
+|    n_updates            | 10           |
+|    policy_gradient_loss | -0.00609     |
+|    value_loss           | 0.0686       |
+------------------------------------------
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 80           |
+|    ep_rew_mean          | -3.72        |
+| time/                   |              |
+|    fps                  | 30           |
+|    iterations           | 3            |
+|    time_elapsed         | 248          |
+|    total_timesteps      | 7680         |
+| train/                  |              |
+|    approx_kl            | 0.0132056745 |
+|    clip_fraction        | 0.113        |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -2.87        |
+|    explained_variance   | 0.109        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 0.033        |
+|    n_updates            | 20           |
+|    policy_gradient_loss | -0.00945     |
+|    value_loss           | 0.106        |
+------------------------------------------
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 80          |
+|    ep_rew_mean          | -3.61       |
+| time/                   |             |
+|    fps                  | 34          |
+|    iterations           | 4           |
+|    time_elapsed         | 299         |
+|    total_timesteps      | 10240       |
+| train/                  |             |
+|    approx_kl            | 0.010624221 |
+|    clip_fraction        | 0.0543      |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -2.86       |
+|    explained_variance   | 0.198       |
+|    learning_rate        | 0.0003      |
+|    loss                 | 0.0334      |
+|    n_updates            | 30          |
+|    policy_gradient_loss | -0.00848    |
+|    value_loss           | 0.123       |
+-----------------------------------------
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 80          |
+|    ep_rew_mean          | -3.72       |
+| time/                   |             |
+|    fps                  | 36          |
+|    iterations           | 5           |
+|    time_elapsed         | 349         |
+|    total_timesteps      | 12800       |
+| train/                  |             |
+|    approx_kl            | 0.014889206 |
+|    clip_fraction        | 0.136       |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -2.87       |
+|    explained_variance   | 0.161       |
+|    learning_rate        | 0.0003      |
+|    loss                 | -0.0511     |
+|    n_updates            | 40          |
+|    policy_gradient_loss | -0.0368     |
+|    value_loss           | 0.106       |
+-----------------------------------------

@@ -1,0 +1,7 @@
+name: pick_one_goal_ppo
+view: ego
+seed: 123
+device_id: 0
+one_goal: 1
+task: go_to_goal
+num_cpu: 32

@@ -1,0 +1,7 @@
+name: pick_ppo
+view: ego
+seed: 123
+device_id: 0
+one_goal: 0 
+task: pick
+num_cpu: 32
