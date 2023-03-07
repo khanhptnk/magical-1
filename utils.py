@@ -75,8 +75,7 @@ class Config:
         self.__dict__.update(d)
 
 
-def setup(yaml_file_or_str, flags=None):
-
+def make_config(yaml_file_or_str, flags=None):
     with open(yaml_file_or_str) as f:
         config_dict = yaml.safe_load(f)
 
@@ -84,6 +83,13 @@ def setup(yaml_file_or_str, flags=None):
         update_config(flags, config_dict)
 
     config = Config(**config_dict)
+
+    return config
+
+
+def setup(yaml_file_or_str, flags=None):
+
+    config = make_config(yaml_file_or_str, flags=flags)
 
     config.exp_dir = "%s/%s" % (config.exp_root_dir, config.name)
     if not config.eval_mode:

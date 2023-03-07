@@ -189,7 +189,7 @@ class BaseEnv(gym.Env, abc.ABC):
     def episode_steps(self):
         return self._episode_steps
 
-    def reset(self):
+    def reset(self, state=None):
         self._episode_steps = 0
         # delete old entities/space
         self._entities = []
@@ -225,7 +225,7 @@ class BaseEnv(gym.Env, abc.ABC):
         self._arena_w = arena_r - arena_l
         self._arena_h = arena_t - arena_b
         self.add_entities([self._arena])
-        reset_rv = self.on_reset()
+        reset_rv = self.on_reset(state=state)
         assert reset_rv is None, \
             f"on_reset method of {type(self)} returned {reset_rv}, but "\
             f"should return None"

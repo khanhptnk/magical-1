@@ -28,18 +28,28 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
                 "ONLY intended for training RL algorithms during debugging, "
                 "so don't forget to disable it when benchmarking IL")
 
-    def on_reset(self):
+    def on_reset(self, state=None):
         # make the robot
-        robot_pos = np.asarray((0.4, -0.0))
-        #robot_pos = self.rng.rand(2) * 2 - 1
-        robot_angle = 0.55 * math.pi
+        if state is None:
+            robot_pos = np.asarray((0.4, -0.0))
+            robot_angle = 0.55 * math.pi
+        else:
+            robot_pos = np.asarray(state['robot']['pos'])
+            robot_angle = state['robot_angle']['angle']
         robot = self._make_robot(robot_pos, robot_angle)
         self.add_entities([robot])
 
-        shape_pos = np.asarray((0.1, -0.65))
-        shape_angle = 0.13 * math.pi
-        shape_colour = 'red'
-        shape_type = en.ShapeType.SQUARE
+        if state is None:
+            shape_pos = np.asarray((0.1, -0.65))
+            shape_angle = 0.13 * math.pi
+            shape_colour = 'red'
+            shape_type = en.ShapeType.SQUARE
+        else:
+            shape_pos = np.asarray(state['shape']['pos'])
+            shape_angle = state['shape']['angle']
+            shape_colour = state['shape']['colour']
+            shape_type = state['shape']['type']
+
         if self.rand_shape_colour:
             shape_colour = self.rng.choice(
                 np.asarray(en.SHAPE_COLOURS, dtype='object'))
@@ -61,8 +71,8 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
                 self.rng,
                 rand_pos=True,
                 rand_rot=True,
-                #rel_pos_linf_limits=self.JITTER_POS_BOUND,
-                #rel_rot_limits=self.JITTER_ROT_BOUND
+                rel_pos_linf_limits=self.JITTER_POS_BOUND,
+                rel_rot_limits=self.JITTER_ROT_BOUND
             )
 
     @property
@@ -71,7 +81,6 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
 
     def score_on_end_of_traj(self):
         robot_pos = np.asarray(self.__shape_ref.shape_body.position)
-        #robot_pos = np.asarray(self.robot.robot_body.position)
         # target is top left
         dist = np.linalg.norm(np.asarray([-1.0, 1.0]) - robot_pos)
         succeed_dist = np.sqrt(2) / 2
@@ -86,8 +95,8 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
         if self.debug_reward:
             # dense reward for training RL
             rew = self.debug_shaped_reward()
-        #if self.config.eval_mode:
-        self.render(mode='human')
+        if self.config.eval_mode:
+            self.render(mode='human')
         return obs, rew, done, info
 
     def debug_shaped_reward(self):
@@ -96,15 +105,16 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
         implementations."""
         shape_pos = np.asarray(self.__shape_ref.shape_body.position)
         # shape_pos[0] is meant to be 0, shape_pos[1] is meant to be 1
-        target_shape_pos = np.array((-1, 1))
+        target_shape_pos = np.array((0, 1))
         shape_to_corner_dist = np.linalg.norm(shape_pos - target_shape_pos)
         # encourage the robot to get close to the shape, and the shape to get
         # close to the goal
         robot_pos = np.asarray(self._robot.robot_body.position)
         robot_to_shape_dist = np.linalg.norm(robot_pos - shape_pos)
+        shaping = -shape_to_corner_dist / 5 \
+            - max(robot_to_shape_dist, 0.2) / 20
+        return shaping + self.score_on_end_of_traj()
 
-        #shaping = -shape_to_corner_dist / 5 \
-                #          - max(robot_to_shape_dist, 0.2) / 20
-        #return shaping + self.score_on_end_of_traj()
-
-        return -(shape_to_corner_dist + robot_to_shape_dist) / 20
+    def get_state(self):
+        return dict(robot=self.robot.get_state(),
+                    shape=self.target_shape.get_state())

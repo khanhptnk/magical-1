@@ -538,6 +538,13 @@ def register_envs():
              'rand_dynamics': False,
          }),
         ('magical.benchmarks.move_to_corner:MoveToCornerEnv',
+         'MoveToCorner-TestAllButDynamics-v0', mtc_ep_len, {
+             'rand_shape_colour': True,
+             'rand_shape_type': True,
+             'rand_poses': True,
+             'rand_dynamics': False,
+         }),
+        ('magical.benchmarks.move_to_corner:MoveToCornerEnv',
          'MoveToCorner-TestColour-v0', mtc_ep_len, {
              'rand_shape_colour': True,
              'rand_shape_type': False,

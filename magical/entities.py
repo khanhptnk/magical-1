@@ -490,6 +490,10 @@ class Robot(Entity):
             self.pupil_transforms, self.pupil_bodies):
             pupil_xform.reset(rotation=pupil_body.angle - self.robot_body.angle)
 
+    def get_state(self):
+        return dict(pos=self.init_pos.tolist(),
+                    angle=self.init_angle)
+
 # #############################################################################
 # Arena boundary
 # #############################################################################
@@ -753,6 +757,12 @@ class Shape(Entity):
             translation=self.shape_body.position,
             rotation=self.shape_body.angle)
 
+    def get_state(self):
+        print(self.init_angle)
+        return dict(pos=self.init_pos.tolist(),
+                    angle=self.init_angle,
+                    colour=self.colour_name,
+                    type=self.shape_type)
 
 # #############################################################################
 # Sensor region for pushing shapes into.
