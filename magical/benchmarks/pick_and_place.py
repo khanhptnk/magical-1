@@ -29,10 +29,10 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
         self.rand_shape_type = rand_shape_type
         self.rand_poses = rand_poses
         self.debug_reward = debug_reward
-        self.observation_space['target_type'] = Box(low=0, high=en.SHAPE_TYPES.shape[0], shape=(1,))
-        self.observation_space['target_colour'] = Box(low=0, high=en.SHAPE_COLOURS.shape[0], shape=(1,))
-        self.observation_space['object_position'] = Box(low=-2, high=2, shape=(2,))
-        self.observation_space['goal_position'] = Box(low=-2, high=2, shape=(2,))
+        #self.observation_space['target_type'] = Box(low=0, high=en.SHAPE_TYPES.shape[0], shape=(1,))
+        #self.observation_space['target_colour'] = Box(low=0, high=en.SHAPE_COLOURS.shape[0], shape=(1,))
+        #self.observation_space['object_position'] = Box(low=-2, high=2, shape=(2,))
+        #self.observation_space['goal_position'] = Box(low=-2, high=2, shape=(2,))
 
     def on_reset(self):
         # make the robot
@@ -109,7 +109,7 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
 
     def reset(self):
         obs = super().reset()
-        self._add_more_info(obs)
+        #self._add_more_info(obs)
         return obs
 
     def score_on_end_of_traj(self):
@@ -133,8 +133,9 @@ class PickAndPlaceEnv(BaseEnv, EzPickle):
         if self.debug_reward:
             # dense reward for training RL
             rew = self.debug_shaped_reward()
-        self._add_more_info(obs)
-        #self.render(mode='human')
+        #self._add_more_info(obs)
+        #if self.config.eval_mode:
+        #    self.render(mode='human')
         return obs, rew, done, info
 
     def debug_shaped_reward(self):

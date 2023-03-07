@@ -96,6 +96,65 @@ class FlattenFrameStack(gym.Wrapper):
         orig_space: Optional[gym.spaces.Box] = None
 
         def box_map(box):
+            nonlocal orig_space
+            if orig_space is None:
+                orig_space = box
+            else:
+                assert np.all(box.low == orig_space.low)
+                assert np.all(box.high == orig_space.high)
+                assert box.dtype == orig_space.dtype
+            return box  # this is never used
+
+        # figure out what the space is inside the dict
+        assert isinstance(env.observation_space, Dict)
+        _gym_tree_map(box_map, env.observation_space)
+        assert orig_space is not None
+        assert isinstance(orig_space, gym.spaces.Box)
+        self.depth_sum = sum(self.depth_by_key.values())
+        new_low = np.repeat(orig_space.low, self.depth_sum, axis=-1)
+        new_high = np.repeat(orig_space.high, self.depth_sum, axis=-1)
+        self.observation_space = Box(low=new_low,
+                                     high=new_high,
+                                     dtype=orig_space.dtype)
+
+    def _get_observation(self):
+        # assume depth 1 dict
+        all_frames = []
+        for frames in self.frames_by_key.values():
+            all_frames.extend(frames)
+        len(all_frames) == self.depth_sum
+        stacked_image = np.concatenate(all_frames, axis=-1)
+        return stacked_image
+
+    def step(self, action):
+        observation, reward, done, info = self.env.step(action)
+        for key, frame in observation.items():
+            self.frames_by_key[key].append(frame)
+        return self._get_observation(), reward, done, info
+
+    def reset(self, **kwargs):
+        observation = self.env.reset(**kwargs)
+        for key, frame in observation.items():
+            depth = self.depth_by_key[key]
+            for _ in range(depth):
+                self.frames_by_key[key].append(frame)
+        return self._get_observation()
+
+
+class DictFlattenFrameStack(gym.Wrapper):
+    """Like EagerFrameStack, except it stacks all images into one big frame.
+    Supports variable lookback for each key."""
+    def __init__(self, env, depth_by_key):
+        super().__init__(env)
+        self.depth_by_key = depth_by_key
+        self.frames_by_key = collections.OrderedDict([
+            (k, collections.deque(maxlen=k_depth))
+            for k, k_depth in depth_by_key.items()
+        ])
+
+        orig_space: Optional[gym.spaces.Box] = None
+
+        def box_map(box):
             if not is_image_space(box):
                 return box
             nonlocal orig_space
@@ -249,16 +308,22 @@ def lores_ea_entry_point(env_cls_or_name,
     def make_lores_ea(**kwargs):
         env_cls = get_cls(env_cls_or_name)
         base_env = env_cls(**kwargs)
-        stack_env = FlattenFrameStack(
-            base_env,
-            collections.OrderedDict([
-                ('allo', allo_frames),
-                ('ego', ego_frames),
-            ]))
-        if isinstance(stack_env.observation_space, Dict):
-            resize_env = ResizeDictObservation(stack_env, small_res)
-        else:
+        if list(base_env.observation_space.keys()) == ['allo', 'ego']:
+            stack_env = FlattenFrameStack(
+                base_env,
+                collections.OrderedDict([
+                    ('allo', allo_frames),
+                    ('ego', ego_frames),
+                ]))
             resize_env = ResizeObservation(stack_env, small_res)
+        else:
+            stack_env = DictFlattenFrameStack(
+                base_env,
+                collections.OrderedDict([
+                    ('allo', allo_frames),
+                    ('ego', ego_frames),
+                ]))
+            resize_env = ResizeDictObservation(stack_env, small_res)
         if channels_first:
             return ChannelsFirst(resize_env)
         return resize_env

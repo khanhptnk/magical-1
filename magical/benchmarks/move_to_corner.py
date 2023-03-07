@@ -30,8 +30,8 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
 
     def on_reset(self):
         # make the robot
-        #robot_pos = np.asarray((0.4, -0.0))
-        robot_pos = self.rng.rand(2)
+        robot_pos = np.asarray((0.4, -0.0))
+        #robot_pos = self.rng.rand(2) * 2 - 1
         robot_angle = 0.55 * math.pi
         robot = self._make_robot(robot_pos, robot_angle)
         self.add_entities([robot])
@@ -61,12 +61,17 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
                 self.rng,
                 rand_pos=True,
                 rand_rot=True,
-                rel_pos_linf_limits=self.JITTER_POS_BOUND,
-                rel_rot_limits=self.JITTER_ROT_BOUND)
+                #rel_pos_linf_limits=self.JITTER_POS_BOUND,
+                #rel_rot_limits=self.JITTER_ROT_BOUND
+            )
+
+    @property
+    def target_shape(self):
+        return self.__shape_ref
 
     def score_on_end_of_traj(self):
-        #robot_pos = np.asarray(self.__shape_ref.shape_body.position)
-        robot_pos = np.asarray(self.robot.robot_body.position)
+        robot_pos = np.asarray(self.__shape_ref.shape_body.position)
+        #robot_pos = np.asarray(self.robot.robot_body.position)
         # target is top left
         dist = np.linalg.norm(np.asarray([-1.0, 1.0]) - robot_pos)
         succeed_dist = np.sqrt(2) / 2
@@ -81,6 +86,8 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
         if self.debug_reward:
             # dense reward for training RL
             rew = self.debug_shaped_reward()
+        #if self.config.eval_mode:
+        self.render(mode='human')
         return obs, rew, done, info
 
     def debug_shaped_reward(self):
@@ -89,12 +96,15 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
         implementations."""
         shape_pos = np.asarray(self.__shape_ref.shape_body.position)
         # shape_pos[0] is meant to be 0, shape_pos[1] is meant to be 1
-        target_shape_pos = np.array((0, 1))
+        target_shape_pos = np.array((-1, 1))
         shape_to_corner_dist = np.linalg.norm(shape_pos - target_shape_pos)
         # encourage the robot to get close to the shape, and the shape to get
         # close to the goal
         robot_pos = np.asarray(self._robot.robot_body.position)
         robot_to_shape_dist = np.linalg.norm(robot_pos - shape_pos)
-        shaping = -shape_to_corner_dist / 5 \
-            - max(robot_to_shape_dist, 0.2) / 20
-        return shaping + self.score_on_end_of_traj()
+
+        #shaping = -shape_to_corner_dist / 5 \
+                #          - max(robot_to_shape_dist, 0.2) / 20
+        #return shaping + self.score_on_end_of_traj()
+
+        return -(shape_to_corner_dist + robot_to_shape_dist) / 20

@@ -11,7 +11,7 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 from stable_baselines3.common.utils import set_random_seed
 
 import flags
@@ -76,7 +76,8 @@ class MAGICALNet(nn.Module):
                 #nn.BatchNorm2d(o)
             ]
 
-        img_shape = observation_space['past_obs'].shape
+        #img_shape = observation_space['past_obs'].shape
+        img_shape = observation_space.shape
 
         conv_layers = [
             *conv_block(i=img_shape[0], o=32*w, k=5, s=1, p=2, b=True),
@@ -103,22 +104,34 @@ class MAGICALNet(nn.Module):
         self.colour_embeddings = nn.Embedding(len(en.SHAPE_COLOURS), TARGET_FEAT_DIM)
         self.shape_embeddings  = nn.Embedding(len(en.SHAPE_TYPES), TARGET_FEAT_DIM)
 
-        self.features_dim = image_dim + target_dim * 3
+        #self.features_dim = image_dim + target_dim * 3
+        self.features_dim = image_dim
 
     def forward(self, x, traj_info=None):
 
-        visual_feat = self.image_feature_layer(x['past_obs'])
-        colour_feat = self.colour_embeddings(x['target_colour'].squeeze(-1).long())
-        shape_feat = self.shape_embeddings(x['target_type'].squeeze(-1).long())
-        position_feat = self.position_feature_layer(x['goal_position'])
+        visual_feat = self.image_feature_layer(x)
+
+        return visual_feat
+
+        #visual_feat = self.image_feature_layer(x['past_obs'])
+        #colour_feat = self.colour_embeddings(x['target_colour'].squeeze(-1).long())
+        #shape_feat = self.shape_embeddings(x['target_type'].squeeze(-1).long())
+        #position_feat = self.position_feature_layer(x['goal_position'])
 
         #print(visual_feat.shape, colour_feat.shape, shape_feat.shape, position_feat.shape)
 
-        print
+        #output = torch.cat([visual_feat, colour_feat*0, shape_feat*0, position_feat*0], dim=-1)
 
-        output = torch.cat([visual_feat, colour_feat*0, shape_feat*0, position_feat*0], dim=-1)
+        #return output
 
-        return output
+
+class LastCheckpointCallback(CheckpointCallback):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _checkpoint_path(self, checkpoint_type='', extension=''):
+        return os.path.join(self.save_path, f"last_model.{extension}")
 
 
 def make_env(rank, make_fn, seed=0):
@@ -134,18 +147,21 @@ if __name__ == '__main__':
     config_file, more_flags = flags.parse()
     config = utils.setup(config_file, flags=more_flags)
 
-    train_env_id = 'PickAndPlace-Demo-LoResCHW4%s-v0' % ('A' if config.view == 'allo' else 'E')
-    test_env_id = train_env_id.replace('Demo', 'Test')
+    train_env_id = 'MoveToCorner-Demo-LoRes4%s-v0' % ('A' if config.view == 'allo' else 'E')
+    #test_env_id = train_env_id.replace('Demo', 'Test')
+    test_env_id = train_env_id
 
     test_env = DummyVecEnv(
         [lambda: Monitor(gym.make(test_env_id,
-            config=configm
-            rand_shape_colour=False,
-            rand_shape_type=False,
+            config=config,
+            rand_shape_colour=True,
+            rand_shape_type=True,
+            rand_poses=True,
             debug_reward=True)) for _ in range(1)]
     )
     test_env.seed(config.seed + config.num_cpu)
 
+    """
     make_train_env_fn = lambda: Monitor(gym.make(train_env_id,
                                         config=config,
                                         rand_shape_colour=False,
@@ -154,8 +170,20 @@ if __name__ == '__main__':
     )
     train_env = SubprocVecEnv([make_env(i, make_train_env_fn, seed=config.seed)
         for i in range(config.num_cpu)])
+    """
 
-    feature_dim = OB_FEAT_DIM + TARGET_FEAT_DIM * 4
+    train_env = DummyVecEnv(
+        [lambda: Monitor(gym.make(test_env_id,
+            config=config,
+            rand_shape_colour=True,
+            rand_shape_type=True,
+            rand_poses=True,
+            debug_reward=True)) for _ in range(32)]
+    )
+
+
+    #feature_dim = OB_FEAT_DIM + TARGET_FEAT_DIM * 4
+    feature_dim = OB_FEAT_DIM
 
     """
     policy_kwargs = dict(
@@ -170,35 +198,45 @@ if __name__ == '__main__':
         features_extractor_class=MAGICALNet,
         features_extractor_kwargs=dict(image_dim=OB_FEAT_DIM,
                                        target_dim=TARGET_FEAT_DIM),
-        net_arch=dict(pi=[feature_dim, 32], vf=[feature_dim, 32])
+        net_arch=dict(pi=[feature_dim, 32], vf=[feature_dim, 32]),
+        activation_fn=nn.ReLU
     )
 
     model = PPO(
         "MultiInputPolicy",
         train_env,
         n_steps=80,
-        batch_size=64,
+        batch_size=32,
         #n_epochs=3,
         #gamma=0.999,
         #gae_lambda=0.95,
         #clip_range=0.2,
         #clip_range_vf=0.2,
         #normalize_advantage=True,
-        #ent_coef=0.01,
+        ent_coef=config.ent_coef,
         #vf_coef=0.5,
         #max_grad_norm=0.5,
         policy_kwargs=policy_kwargs,
         verbose=2,
         tensorboard_log=config.exp_dir,
-        device=torch.device('cuda', 0))
+        device=torch.device('cuda', config.device_id))
 
     eval_callback = EvalCallback(test_env, best_model_save_path=config.exp_dir,
                                 log_path=config.exp_dir, eval_freq=500,
                                 deterministic=True, render=False)
 
-    #model.set_parameters('%s/best_model.zip' % exp_dir)
-    #evaluate_policy(model.policy, test_env, 100)
+    last_checkpoint_callback = LastCheckpointCallback(
+                                save_freq=10000,
+                                save_path=config.exp_dir,
+                                save_replay_buffer=True,
+                                save_vecnormalize=True,
+                                verbose=2
+    )
 
-    #model.set_parameters('%s/best_model.zip' % pretrain_dir)
-    model.learn(25000000, callback=eval_callback)
+    if config.eval_mode:
+        model.set_parameters('%s/last_model.zip' % config.exp_dir)
+        evaluate_policy(model.policy, test_env, 100)
+    else:
+        #model.set_parameters('%s/best_model.zip' % pretrain_dir)
+        model.learn(25000000, callback=[eval_callback, last_checkpoint_callback])
 

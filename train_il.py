@@ -213,7 +213,7 @@ class Expert(BasePolicy):
 
 rng = np.random.default_rng(0)
 env = gym.make('MoveToCorner-Demo-LoRes4A-v0', debug_reward=False)
-venv = DummyVecEnv([lambda: gym.make('MoveToCorner-Demo-LoRes4E-v0', debug_reward=False)])
+venv = DummyVecEnv([lambda: gym.make('MoveToCorner-Demo-LoRes4A-v0', debug_reward=False)])
 venv = DummyVecEnv([lambda: RolloutInfoWrapper(env)])
 
 #sys.exit(1)
@@ -225,7 +225,7 @@ policy = SimplePolicy(env.observation_space, env.action_space, [], MAGICALNet, {
 rollouts = rollout.rollout(
     expert,
     venv,
-    rollout.make_sample_until(min_timesteps=None, min_episodes=100),
+    rollout.make_sample_until(min_timesteps=None, min_episodes=2),
     rng=rng,
 )
 
@@ -244,7 +244,7 @@ bc_trainer = bc.BC(
 )
 
 for _ in range(1000):
-    bc_trainer.train(n_epochs=1)
+    bc_trainer.train(n_epochs=100)
     print('eval...')
     reward, _ = evaluate_policy(bc_trainer.policy, env, 10)
     print("Reward:", reward)
