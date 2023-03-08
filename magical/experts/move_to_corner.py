@@ -14,15 +14,18 @@ from magical.entities import RobotAction as RA
 
 class MoveToCornerExpert(BaseExpert):
 
-    def _predict(self, observations, deterministic=False):
+    def _predict(self, observations, not_used_deterministic=None):
         actions = [self._next_action(env) for env in self.envs]
         return actions
 
-    def predict(self, observations, deterministic=False):
-        return self._predict(observations, deterministic)
+    def predict(self, observations, not_used_deterministic=None):
+        return self._predict(observations)
 
-    def reset(self, envs):
-        self.envs = envs
+    def forward(self, observations, not_used_deterministic=None):
+        return self._predict(observations)
+
+    def reset(self, env):
+        self.envs = env.envs
         self.history = deque(maxlen=10)
         self.should_hold = False
 

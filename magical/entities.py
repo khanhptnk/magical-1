@@ -758,7 +758,6 @@ class Shape(Entity):
             rotation=self.shape_body.angle)
 
     def get_state(self):
-        print(self.init_angle)
         return dict(pos=self.init_pos.tolist(),
                     angle=self.init_angle,
                     colour=self.colour_name,

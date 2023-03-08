@@ -100,6 +100,7 @@ def setup(yaml_file_or_str, flags=None):
     np.random.seed(config.seed)
 
     config.random = random.Random(config.seed)
+    config.device = torch.device('cuda:%d' % config.device)
 
     config.start_time = time.time()
     log_file = os.path.join(config.exp_dir, 'run.log')

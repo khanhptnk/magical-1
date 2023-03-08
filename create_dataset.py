@@ -17,6 +17,7 @@ SPLITS = ['train', 'val', 'test']
 def create_set(env, expert, n_points):
     points = []
     for i in range(n_points):
+        print(i)
         ob = env.reset()
         expert.reset([env])
         init_state = env.get_state()
@@ -36,14 +37,13 @@ def create_set(env, expert, n_points):
 
 def save_all(data):
     data_dir = config.data_dir
-    print(data_dir)
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
     for split in SPLITS:
         path = '%s/%s.json' % (data_dir, split)
-        print('Saving %s data with %d examples to %s' % (split, len(data[split]), path))
         with open(path, 'w') as f:
-            json.dump(data, f)
+            json.dump(data[split], f)
+        print('Saved %s data with %d examples to %s' % (split, len(data[split]), path))
 
 if __name__ == '__main__':
 

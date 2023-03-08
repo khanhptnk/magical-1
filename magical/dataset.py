@@ -19,7 +19,8 @@ class Dataset:
             self.data[split] = DataSplit(self._load_data(split), seed=seed)
             if 'train' in split:
                 self.data[split + '_val'] = DataSplit(self.random.sample(
-                    self.data[split].data, len(self.data[split]) // 20), seed=seed)
+                    self.data[split].data, max(1, len(self.data[split]) // 20)),
+                    seed=seed)
 
         for split in splits:
             logging.info('Loaded %s set of size %d' % (split, len(self.data[split])))
@@ -42,10 +43,6 @@ class DataSplit:
     def __init__(self, data, seed=None):
 
         self.data = data
-
-        for item in self.data:
-            item['maze'] = np.array(item['maze'])
-
         self.random = random.Random(seed)
         self.random.shuffle(data)
 
@@ -67,6 +64,7 @@ class DataSplit:
             batch = self.data[self.idx : (self.idx + batch_size)]
 
             if len(batch) < batch_size:
+                print(len(self.data))
                 batch += self.random.sample(self.data, batch_size - len(batch))
                 self.random.shuffle(self.data)
                 self.idx = 0

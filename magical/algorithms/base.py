@@ -2,6 +2,8 @@ import os
 import sys
 import logging
 
+from collections import defaultdict
+import numpy as np
 import torch
 
 
@@ -9,13 +11,11 @@ class BaseAlgorithm:
 
     def __init__(self, config):
         self.config = config
+        self.device = config.device
 
     def train(self, policy, dataset, train_env, eval_env):
 
-        self._make_optim(policy)
-
-        n_params = sum(p.numel() for p in policy.parameters())
-        logging.info('Number of parameters: %d' % n_params)
+        config = self.config
 
         train_stats = defaultdict(list)
         train_dataset = dataset['train'].iterate_batches(
@@ -28,6 +28,8 @@ class BaseAlgorithm:
 
         for i, train_batch in zip(range(config.train.n_iters + 1), train_dataset):
 
+            print(i)
+
             if i % config.train.log_every == 0:
                 logging.info('Train stats %s' % ' '.join(['%s %.2f' % (k, np.average(v))
                     for k, v in train_stats.items()]))
@@ -37,7 +39,6 @@ class BaseAlgorithm:
                     logging.info('After %d iters' % i)
 
                     for split in ['train_val', 'val', 'test']:
-
                         eval_stats = defaultdict(list)
                         eval_dataset = dataset[split].iterate_batches(batch_size=1)
 
@@ -54,9 +55,9 @@ class BaseAlgorithm:
                         if split in best_rew and avg_rew > best_rew[split]:
                             best_rew[split] = avg_rew
                             if not config.eval_mode:
-                                agent.save('%s/best_%s.ckpt' % (config.exp_dir, split))
+                                policy.save('%s/best_%s.ckpt' % (config.exp_dir, split))
 
-                        agent.save('%s/last.ckpt' % (config.exp_dir, split))
+                        policy.save('%s/last.ckpt' % config.exp_dir)
 
             if config.eval_mode:
                 break
@@ -68,14 +69,15 @@ class BaseAlgorithm:
 
         batch_size = len(batch)
         ob = env.reset()
-        policy.reset(eval=True)
+        policy.reset(is_eval=True)
 
         has_done = [False] * batch_size
         total_reward = [0] * batch_size
         num_steps = [0] * batch_size
 
         while not all(has_done):
-            action = agent.decide(ob)
+            action = policy.predict(ob, deterministic=True)
+            print(action)
             ob, reward, done, info = env.step(action)
             for i, (r, d) in enumerate(zip(reward, done)):
                 total_reward[i] += r
@@ -93,6 +95,4 @@ class BaseAlgorithm:
             else:
                 stats[k].append(v)
 
-    def _make_optim(self, policy):
-        self.optim = torch.optim.AdamW(policy.parameters(), lr=config.train.lr)
 

@@ -1,43 +1,46 @@
-import
-
+import torch
 
 import magical.experts as expert_factory
-from magical.algorithms import BaseAlgorithm
+from magical.algorithms.base import BaseAlgorithm
 
 
 class BehaviorCloning(BaseAlgorithm):
 
-    def __init__(self, config):
+    def __init__(self, config, env):
 
         super().__init__(config)
-        self.expert = expert_factory.load(config)
-        self.loss_fn = torch.nn.CrossEntropyLoss(
-            ignore_index=-1, reduction='sum')
+        self.loss_fn = torch.nn.CrossEntropyLoss(ignore_index=-1, reduction='sum')
+        self.expert = expert_factory.load(config,
+                                          env.observation_space,
+                                          env.action_space,
+                                          None)
 
-    def _add_ref_actions(self, ref_actions, action, done):
+    def _add_ref_actions(self, actions, action, done):
+        new_action = action[:]
         for i, a in enumerate(action):
-            if not done[i]:
-                ref_actions[i].append(a)
-            else:
-                ref_actions[i].append(-1)
+            if done[i]:
+                new_action[i] = -1
+        actions.append(torch.tensor(new_action).to(self.device))
 
     def train_episode(self, i_iter, policy, env, batch):
 
         batch_size = len(batch)
         ob = env.reset()
         self.expert.reset(env)
-        policy.reset(eval=False)
+        policy.reset(is_eval=False)
 
         has_done = [False] * batch_size
         total_reward = [0] * batch_size
         num_steps = [0] * batch_size
 
-        ref_actions = [[] for _ in range(batch_size)]
+        ref_actions = []
+        logits = []
 
         while not all(has_done):
-            ref_action = self.expert()
+            ref_action = self.expert.predict(ob)
             self._add_ref_actions(ref_actions, ref_action, has_done)
-            action = policy.predict(ob, deterministic=True)
+            action, logit = policy.forward(ob, deterministic=True)
+            logits.append(logit)
             ob, reward, done, info = env.step(ref_action)
 
             for i, (r, d) in enumerate(zip(reward, done)):
@@ -46,30 +49,28 @@ class BehaviorCloning(BaseAlgorithm):
                     num_steps[i] += 1
                 has_done[i] |= d
 
-        loss = self.update_policy(policy, ref_actions)
+        loss = self.update_policy(policy, logits, ref_actions)
 
         return dict(loss=loss,
                     rewards=total_reward,
                     num_steps=num_steps)
 
-    def update_policy(self, policy, ref_actions):
+    def update_policy(self, policy, logits, ref_actions):
 
-        logits = policy.logits
-        ref_actions = torch.tensor(ref_actions).to(logits.device).long()
-
-        assert logits.shape[1] == ref_actions.shape[1]
+        assert len(logits) == len(ref_actions)
+        assert ref_actions[0].shape[0] == self.config.train.batch_size
 
         loss = 0
         for l, a in zip(logits, ref_actions):
             loss += self.loss_fn(l, a)
 
-        loss /= ref_actions.shape[0]
+        loss /= self.config.train.batch_size
 
-        self.optim.zero_grad()
+        policy.optimizer.zero_grad()
         loss.backward()
-        self.optim.step()
+        policy.optimizer.step()
 
-        return loss.item() / len(ref_actions.shape[1])
+        return loss.item() / len(ref_actions)
 
 
 

@@ -1,10 +1,11 @@
 import os
 import sys
+import logging
 
 import torch
 import torch.nn as nn
 
-from stable_baselines3.common.policies import BasePolicy
+from stable_baselines3.common.policies import BasePolicy, ActorCriticPolicy
 from stable_baselines3.common.preprocessing import get_action_dim
 from stable_baselines3.common.distributions import (
     BernoulliDistribution,
@@ -21,10 +22,11 @@ from stable_baselines3.common.torch_layers import (
     FlattenExtractor,
     NatureCNN,
     create_mlp,
+    MlpExtractor,
     get_actor_critic_arch,
 )
 
-class MagicalPolicy(ActorCriticPolicy):
+class MagicalPolicy(BasePolicy):
 
     def __init__(self,
             observation_space,
@@ -68,34 +70,63 @@ class MagicalPolicy(ActorCriticPolicy):
 
         self._build(lr_schedule)
 
+        n_params = sum(p.numel() for p in self.parameters())
+        logging.info(self)
+        logging.info('Number of parameters: %d' % n_params)
+
+    def _build_mlp_extractor(self) -> None:
+        """
+        Create the policy and value networks.
+        Part of the layers can be shared.
+        """
+        # Note: If net_arch is None and some features extractor is used,
+        #       net_arch here is an empty list and mlp_extractor does not
+        #       really contain any layers (acts like an identity module).
+        modules = create_mlp(
+            self.features_dim,
+            -1,
+            self.net_arch,
+            activation_fn=self.activation_fn,
+        )
+        self.mlp_extractor = nn.Sequential(*modules)
+
     def _build(self, lr_schedule):
-
         self._build_mlp_extractor()
-        latent_dim_pi = self.mlp_extractor.latent_dim_pi
-
-        if isinstance(self.action_dist, DiagGaussianDistribution):
-            self.action_net, self.log_std = self.action_dist.proba_distribution_net(
-                latent_dim=latent_dim_pi, log_std_init=self.log_std_init
-            )
-        elif isinstance(self.action_dist, StateDependentNoiseDistribution):
-            self.action_net, self.log_std = self.action_dist.proba_distribution_net(
-                latent_dim=latent_dim_pi, latent_sde_dim=latent_dim_pi, log_std_init=self.log_std_init
-            )
-        elif isinstance(self.action_dist, (CategoricalDistribution, MultiCategoricalDistribution, BernoulliDistribution)):
-            self.action_net = self.action_dist.proba_distribution_net(latent_dim=latent_dim_pi)
-        else:
-            raise NotImplementedError(f"Unsupported distribution '{self.action_dist}'.")
+        latent_dim_pi = self.net_arch[-1]
+        self.action_net = self.action_dist.proba_distribution_net(latent_dim=latent_dim_pi)
 
         # Setup optimizer with initial learning rate
         self.optimizer = self.optimizer_class(
             self.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
 
-    def forward(self, obs, deterministic=False):
-        pi_features = self.extract_features(obs)
-        latent_pi = self.mlp_extractor.forward_actor(pi_features)
-        distribution = self._get_action_dist_from_latent(latent_pi)
-        actions = distribution.get_actions(deterministic=deterministic)
-        log_prob = distribution.log_prob(actions)
-        actions = actions.reshape((-1,) + self.action_space.shape)
-        return actions, log_prob
+    def extract_features(self, obs):
+        return super().extract_features(obs, self.features_extractor)
 
+    def _get_action_dist_from_latent(self, logits):
+        return self.action_dist.proba_distribution(action_logits=logits)
+
+    def forward(self, obs, deterministic=False):
+        obs, vectorized_env = self.obs_to_tensor(obs)
+        pi_features = self.extract_features(obs)
+        latent_pi = self.mlp_extractor(pi_features)
+        logits = self.action_net(latent_pi)
+        distribution = self._get_action_dist_from_latent(logits)
+        actions = distribution.get_actions(deterministic=deterministic)
+        #log_prob = distribution.log_prob(actions)
+        actions = actions.reshape((-1,) + self.action_space.shape)
+        return actions, logits
+
+    def get_distribution(self, obs):
+        features = super().extract_features(obs, self.features_extractor)
+        latent_pi = self.mlp_extractor(features)
+        logits = self.action_net(latent_pi)
+        return self._get_action_dist_from_latent(logits)
+
+    def _predict(self, obs, deterministic=False):
+        return self.get_distribution(obs).get_actions(deterministic=deterministic)
+
+    def reset(self, is_eval=False):
+        if is_eval:
+            self.eval()
+        else:
+            self.train()
