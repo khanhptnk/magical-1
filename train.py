@@ -3,7 +3,7 @@ import sys
 import logging
 import gym
 
-from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 import flags
 import utils
@@ -24,15 +24,14 @@ if __name__ == '__main__':
     env_id = '%s-TestAllButDynamics-%s%s-v0' % \
         (config.env.name, config.env.resolution, config.env.view)
 
-    """
     eval_env = DummyVecEnv(
         [lambda: gym.make(env_id, config=config) for _ in range(1)])
+    """
     train_env = DummyVecEnv(
         [lambda: gym.make(env_id, config=config) for _ in range(config.train.batch_size)])
     """
-
-    eval_env  = gym.make(env_id, config=config)
-    train_env = gym.vector.make(env_id, config=config, num_envs=config.train.batch_size)
+    train_env = SubprocVecEnv(
+        [utils.make_env(env_id, i) for i in range(config.train.batch_size)])
 
     policy = MagicalPolicy(
         eval_env.observation_space,

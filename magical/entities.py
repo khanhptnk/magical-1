@@ -5,6 +5,7 @@ regions' are all examples of entities."""
 import abc
 import enum
 import math
+import argparse
 import weakref
 
 import numpy as np
@@ -491,8 +492,11 @@ class Robot(Entity):
             pupil_xform.reset(rotation=pupil_body.angle - self.robot_body.angle)
 
     def get_state(self):
-        return dict(pos=self.init_pos.tolist(),
-                    angle=self.init_angle)
+        state = argparse.Namespace()
+        state.position = self.robot_body.position
+        state.angle = self.robot_body.angle
+        state.rotation_vector = self.robot_body.rotation_vector
+        return state
 
 # #############################################################################
 # Arena boundary
@@ -758,6 +762,11 @@ class Shape(Entity):
             rotation=self.shape_body.angle)
 
     def get_state(self):
+        state = argparse.Namespace()
+        state.position = self.shape_body.position
+        state.angle = self.shape_body.angle
+        state.rotation_vector = self.shape_body.rotation_vector
+
         return dict(pos=self.init_pos.tolist(),
                     angle=self.init_angle,
                     colour=self.colour_name,

@@ -70,6 +70,7 @@ class BaseAlgorithm:
         batch_size = len(batch)
         ob = env.reset()
         policy.reset(is_eval=True)
+        self.expert.reset(env)
 
         has_done = [False] * batch_size
         total_reward = [0] * batch_size
@@ -77,7 +78,7 @@ class BaseAlgorithm:
 
         while not all(has_done):
             action = policy.predict(ob, deterministic=True)
-            print(action)
+            action = self.expert.predict(ob)
             ob, reward, done, info = env.step(action)
             for i, (r, d) in enumerate(zip(reward, done)):
                 total_reward[i] += r

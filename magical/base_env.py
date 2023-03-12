@@ -185,9 +185,8 @@ class BaseEnv(gym.Env, abc.ABC):
     def robot(self):
         return self._robot
 
-    @property
-    def episode_steps(self):
-        return self._episode_steps
+    def get_robot_state(self):
+        return self.robot.get_state()
 
     def reset(self, state=None):
         self._episode_steps = 0

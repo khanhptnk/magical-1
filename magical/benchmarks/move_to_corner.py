@@ -1,4 +1,5 @@
 import math
+import argparse
 import warnings
 
 from gym.utils import EzPickle
@@ -116,5 +117,7 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
         return shaping + self.score_on_end_of_traj()
 
     def get_state(self):
-        return dict(robot=self.robot.get_state(),
-                    shape=self.target_shape.get_state())
+        state = argparse.Namespace()
+        state.robot = self.robot.get_state()
+        state.shape = self.target_shape.get_state()
+        return state

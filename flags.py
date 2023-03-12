@@ -11,8 +11,10 @@ def parse():
     parser.add_argument('-device', type=int)
     parser.add_argument('-eval_mode', type=int)
 
-    parser.add_argument('dataset.n_train', type=int, default=10)
-    parser.add_argument('dataset.n_eval', type=int, default=10)
+    parser.add_argument('-env.resolution', type=str)
+
+    parser.add_argument('-dataset.n_train', type=int, default=10)
+    parser.add_argument('-dataset.n_eval', type=int, default=10)
 
     flags = parser.parse_args()
 

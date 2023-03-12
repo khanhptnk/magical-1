@@ -3,8 +3,10 @@ import sys
 import json
 import gym
 
+import orjson
 import jsonargparse
 import jsonpickle
+import pickle
 import flags
 import utils
 
@@ -14,23 +16,26 @@ import magical.experts as expert_factory
 
 SPLITS = ['train', 'val', 'test']
 
-def create_set(env, expert, n_points):
+def create_set(name, env, expert, n_points):
     points = []
     for i in range(n_points):
         print(i)
         ob = env.reset()
         expert.reset([env])
         init_state = env.get_state()
+        obs = [ob]
         actions = []
         has_done = False
         rewards = []
         while not has_done:
             action = expert.predict(ob)[0]
             ob, reward, done, info = env.step(action)
+            obs.append(ob)
             actions.append(action)
             rewards.append(reward)
             has_done |= done
-        points.append(dict(init_state=init_state,
+        points.append(dict(id='%s_%d' % (name, i),
+                           init_state=init_state,
                            actions=actions,
                            rewards=rewards))
     return points
@@ -43,6 +48,7 @@ def save_all(data):
         path = '%s/%s.json' % (data_dir, split)
         with open(path, 'w') as f:
             json.dump(data[split], f)
+            #pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
         print('Saved %s data with %d examples to %s' % (split, len(data[split]), path))
 
 if __name__ == '__main__':
@@ -60,11 +66,11 @@ if __name__ == '__main__':
                                  env.action_space,
                                  None)
 
-    create_set_fn = lambda n_points: create_set(env, expert, n_points)
+    create_set_fn = lambda n_points, name: create_set(name, env, expert, n_points)
 
     data = {}
-    data['train'] = create_set_fn(config.dataset.n_train)
-    data['val']   = create_set_fn(config.dataset.n_eval)
-    data['test']  = create_set_fn(config.dataset.n_eval)
+    data['train'] = create_set_fn(config.dataset.n_train, 'train')
+    data['val']   = create_set_fn(config.dataset.n_eval, 'val')
+    data['test']  = create_set_fn(config.dataset.n_eval, 'test')
 
     save_all(data)

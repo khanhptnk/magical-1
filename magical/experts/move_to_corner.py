@@ -15,7 +15,7 @@ from magical.entities import RobotAction as RA
 class MoveToCornerExpert(BaseExpert):
 
     def _predict(self, observations, not_used_deterministic=None):
-        actions = [self._next_action(env) for env in self.envs]
+        actions = [self._next_action(i) for i in range(len(observations))]
         return actions
 
     def predict(self, observations, not_used_deterministic=None):
@@ -24,29 +24,33 @@ class MoveToCornerExpert(BaseExpert):
     def forward(self, observations, not_used_deterministic=None):
         return self._predict(observations)
 
-    def reset(self, env):
-        self.envs = env.envs
+    def reset(self, venv):
+        self.venv = venv
         self.history = deque(maxlen=10)
         self.should_hold = False
 
-    def _next_action(self, env):
+    def _next_action(self, id):
 
-        robot_body = env.robot.robot_body
-        robot_pos = robot_body.position
-        robot_angle = robot_body.angle
+        env_state = self.get_env_attr(id, 'get_state')
 
-        robot_vector = robot_body.rotation_vector.rotated_degrees(90)
+        robot_pos = env_state['robot']['pos']
+        robot_angle = env_state['robot']['angle']
+        robot_rotation_vector = env_state['robot']['rotation_vector']
 
-        target_pos = env.target_shape.shape_body.position
-        target_dist = target_pos.get_distance(robot_pos)
-        target_vector = (target_pos - robot_pos).normalized()
-        diff_angle = robot_vector.get_angle_between(target_vector)
+        shape_pos = env_state['shape']['pos']
+        shape_angle = env_state['shape']['angle']
 
-        if not self.should_hold and target_dist < 0.4 and len(self.history) >= 3:
+        robot_vector = robot_rotation_vector.rotated_degrees(90)
+
+        robot_to_shape_dist = shape_pos.get_distance(robot_pos)
+        to_shape_vector = (shape_pos - robot_pos).normalized()
+        diff_angle = robot_vector.get_angle_between(to_shape_vector)
+
+        if not self.should_hold and robot_to_shape_dist < 0.4 and len(self.history) >= 3:
             l = len(self.history)
             for i in range(l - 3, l - 1):
-                d_now = self.history[i]['dist_to_target']
-                d_next = self.history[i + 1]['dist_to_target']
+                d_now = self.history[i]['robot_to_shape_dist']
+                d_next = self.history[i + 1]['robot_to_shape_dist']
                 if abs(d_next - d_now) > 0.01:
                     self.should_hold = True
 
@@ -54,10 +58,13 @@ class MoveToCornerExpert(BaseExpert):
 
         if self.should_hold:
             act_flags[2] = RA.CLOSE
-            target_pos = pm.vec2d.Vec2d((-1., 1.))
-            target_dist = target_pos.get_distance(env.target_shape.shape_body.position)
-            target_vector = (target_pos - robot_pos).normalized()
-            diff_angle = robot_vector.get_angle_between(target_vector)
+            goal_pos = pm.vec2d.Vec2d((-1., 1.))
+            shape_to_goal_dist = goal_pos.get_distance(shape_pos)
+            to_goal_vector = (goal_pos - robot_pos).normalized()
+            diff_angle = robot_vector.get_angle_between(to_goal_vector)
+            target_dist = shape_to_goal_dist
+        else:
+            target_dist = robot_to_shape_dist
 
         angle_eps = math.pi / 20
 
@@ -99,8 +106,8 @@ class MoveToCornerExpert(BaseExpert):
 
         if should_back_up:
             act_flags[0] = RA.DOWN
-            origin = pm.vec2d.Vec2d((0, 0))
-            target_vector = (origin - robot_pos).normalized()
+            center = pm.vec2d.Vec2d((0, 0))
+            target_vector = (center - robot_pos).normalized()
             diff_angle = (-robot_vector).get_angle_between(target_vector)
             if diff_angle < 0 and diff_angle >= -math.pi:
                 act_flags[1] = RA.RIGHT
@@ -112,10 +119,10 @@ class MoveToCornerExpert(BaseExpert):
             'action': act_flags,
             'robot_pos': robot_pos,
             'robot_angle': robot_angle,
-            'dist_to_target': target_dist
+            'robot_to_shape_dist': robot_to_shape_dist
         })
 
-        action = env.flags_to_action(act_flags)
+        action = self.env_method(id, 'flags_to_action', act_flags)
 
         #input()
 

@@ -31,7 +31,6 @@ class MAGICALNet(nn.Module):
         ]
         # final FC layer to make feature maps the right size
         test_tensor = torch.zeros((1,) + observation_space.shape)
-        print(test_tensor.shape)
         for layer in conv_layers:
             test_tensor = layer(test_tensor)
         fc_in_size = np.prod(test_tensor.shape)
