@@ -47,7 +47,7 @@ if __name__ == '__main__':
     if config.policy.load_from is not None:
         policy.load(config.policy.load_from)
 
-    dataset = Dataset(config.data_dir, seed=config.seed)
+    dataset = Dataset(config, seed=config.seed)
 
     algorithm = BehaviorCloning(config, eval_env)
     algorithm.train(policy, dataset, train_env, eval_env)

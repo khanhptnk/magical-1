@@ -9,16 +9,18 @@ import numpy as np
 
 class Dataset:
 
-    def __init__(self, data_dir, splits=['train', 'val', 'test'], seed=None):
+    def __init__(self, config, splits=['train', 'val', 'test'], seed=None):
 
         self.random = random.Random(seed)
 
         self.data = {}
-        self.data_dir = data_dir
+        self.data_dir = config.data_dir
         self.splits = splits
         for split in splits:
             self.data[split] = DataSplit(self._load_data(split), seed=seed)
-            if 'train' in split:
+            if split == 'train':
+                if self.config.train_subset:
+                    self.data[split] = self.data[split][:self.config.train_subset]
                 self.data[split + '_val'] = DataSplit(self.random.sample(
                     self.data[split].data, max(1, len(self.data[split]) // 20)),
                     seed=seed)
@@ -31,7 +33,6 @@ class Dataset:
         file_name = os.path.join(self.data_dir, split + '.json')
 
         with open(file_name, 'rb') as f:
-            #data = json.load(f)
             data = pickle.load(f)
 
         return data
