@@ -10,24 +10,34 @@ class BehaviorCloning(BaseAlgorithm):
 
         super().__init__(config)
         self.loss_fn = torch.nn.CrossEntropyLoss(ignore_index=-1, reduction='sum')
+        """
         self.expert = expert_factory.load(config,
                                           env.observation_space,
                                           env.action_space,
                                           None)
+        """
 
     def _add_ref_actions(self, actions, action, done):
-        new_action = action[:]
-        for i, a in enumerate(action):
-            if done[i]:
-                new_action[i] = -1
+        new_action = [-1 if done[i] else a for i, a in enumerate(action)]
         actions.append(torch.tensor(new_action).to(self.device))
 
     def train_episode(self, i_iter, policy, env, batch):
-
         batch_size = len(batch)
+        ref_action_iter = []
+        for i, item in enumerate(batch):
+            # set initial state for environments before reset()
+            env.env_method('set_init_state', item['init_state'], indices=[i])
+            ref_action_iter.append(iter(item['actions']))
         ob = env.reset()
-        self.expert.reset(env)
+        #self.expert.reset(env)
         policy.reset(is_eval=False)
+
+        """"
+        print(batch[0]['init_state'].robot)
+        print(batch[0]['init_state'].shape)
+        env.env_method('render', mode='human', indices=[0])
+        input()
+        """
 
         has_done = [False] * batch_size
         total_reward = [0] * batch_size
@@ -37,7 +47,8 @@ class BehaviorCloning(BaseAlgorithm):
         logits = []
 
         while not all(has_done):
-            ref_action = self.expert.predict(ob)
+            #ref_action = self.expert.predict(ob)
+            ref_action = [next(x) for x in ref_action_iter]
             self._add_ref_actions(ref_actions, ref_action, has_done)
             action, logit = policy.forward(ob, deterministic=True)
             logits.append(logit)
@@ -50,6 +61,8 @@ class BehaviorCloning(BaseAlgorithm):
                 has_done[i] |= d
 
         loss = self.update_policy(policy, logits, ref_actions)
+
+        print(total_reward)
 
         return dict(loss=loss,
                     rewards=total_reward,

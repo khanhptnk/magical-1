@@ -31,7 +31,7 @@ class MagicalPolicy(BasePolicy):
     def __init__(self,
             observation_space,
             action_space,
-            lr_schedule,
+            lr_schedule=None,
             net_arch=None,
             activation_fn=nn.ReLU,
             features_extractor_class=None,
@@ -130,3 +130,16 @@ class MagicalPolicy(BasePolicy):
             self.eval()
         else:
             self.train()
+
+    def save(self, path):
+        checkpoint = {}
+        checkpoint['state_dict'] = self.state_dict()
+        checkpoint['optim'] = self.optimizer.state_dict()
+        torch.save(checkpoint, path)
+        logging.info('Saved model to %s' % path)
+
+    def load(self, path):
+        checkpoint = torch.load(path, map_location=self.device)
+        self.load_state_dict(checkpoint['state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optim'])
+        logging.info('Loaded model from %s' % path)

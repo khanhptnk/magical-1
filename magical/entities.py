@@ -12,6 +12,7 @@ import numpy as np
 import pymunk as pm
 import pymunk.autogeometry as autogeom
 
+from utils import Config
 import magical.geom as gtools
 import magical.render as r
 from magical.style import (
@@ -766,11 +767,9 @@ class Shape(Entity):
         state.position = self.shape_body.position
         state.angle = self.shape_body.angle
         state.rotation_vector = self.shape_body.rotation_vector
-
-        return dict(pos=self.init_pos.tolist(),
-                    angle=self.init_angle,
-                    colour=self.colour_name,
-                    type=self.shape_type)
+        state.colour = self.colour_name
+        state.type = self.shape_type
+        return state
 
 # #############################################################################
 # Sensor region for pushing shapes into.

@@ -3,12 +3,13 @@ import sys
 import json
 import gym
 
-import orjson
 import jsonargparse
 import jsonpickle
 import pickle
 import flags
 import utils
+
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 import magical
 magical.register_envs()
@@ -18,26 +19,32 @@ SPLITS = ['train', 'val', 'test']
 
 def create_set(name, env, expert, n_points):
     points = []
-    for i in range(n_points):
-        print(i)
-        ob = env.reset()
-        expert.reset([env])
-        init_state = env.get_state()
-        obs = [ob]
-        actions = []
-        has_done = False
-        rewards = []
-        while not has_done:
-            action = expert.predict(ob)[0]
-            ob, reward, done, info = env.step(action)
-            obs.append(ob)
-            actions.append(action)
-            rewards.append(reward)
-            has_done |= done
-        points.append(dict(id='%s_%d' % (name, i),
-                           init_state=init_state,
-                           actions=actions,
-                           rewards=rewards))
+    batch_size = env.num_envs
+    assert n_points % batch_size == 0
+    id = 0
+    for i in range(n_points // batch_size):
+        print(name, i * batch_size)
+        obs = env.reset()
+        expert.reset(env)
+        init_states = env.env_method('get_state', indices=range(batch_size))
+        has_dones = [False] * batch_size
+        action_seqs = [[] for _ in range(batch_size)]
+        reward_seqs = [[] for _ in range(batch_size)]
+        while not all(has_dones):
+            actions = expert.predict(obs)
+            obs, rewards, dones, info = env.step(actions)
+            for i, (a, r, d) in enumerate(zip(actions, rewards, dones)):
+                action_seqs[i].append(a)
+                reward_seqs[i].append(r)
+                has_dones[i] |= d
+        print(rewards)
+        for s, a_seq, r_seq in zip(init_states, action_seqs, reward_seqs):
+            #print(a_seq)
+            id += 1
+            points.append(dict(id='%s_%d' % (name, id),
+                               init_state=s,
+                               actions=a_seq,
+                               rewards=r_seq))
     return points
 
 def save_all(data):
@@ -46,9 +53,9 @@ def save_all(data):
         os.makedirs(data_dir)
     for split in SPLITS:
         path = '%s/%s.json' % (data_dir, split)
-        with open(path, 'w') as f:
-            json.dump(data[split], f)
-            #pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+        with open(path, 'wb') as f:
+            #json.dump(data[split], f)
+            pickle.dump(data[split], f, pickle.HIGHEST_PROTOCOL)
         print('Saved %s data with %d examples to %s' % (split, len(data[split]), path))
 
 if __name__ == '__main__':
@@ -59,13 +66,8 @@ if __name__ == '__main__':
     env_id = '%s-TestAllButDynamics-%s%s-v0' % \
         (config.env.name, config.env.resolution, config.env.view)
 
-    env = gym.make(env_id, config=config)
-
-    expert = expert_factory.load(config,
-                                 env.observation_space,
-                                 env.action_space,
-                                 None)
-
+    env = SubprocVecEnv([utils.make_env(env_id, i, config) for i in range(config.train.batch_size)])
+    expert = expert_factory.load(config, env.observation_space, env.action_space, None)
     create_set_fn = lambda n_points, name: create_set(name, env, expert, n_points)
 
     data = {}

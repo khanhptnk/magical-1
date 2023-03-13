@@ -26,37 +26,35 @@ class MoveToCornerExpert(BaseExpert):
 
     def reset(self, venv):
         self.venv = venv
-        self.history = deque(maxlen=10)
-        self.should_hold = False
+        self.history = [deque(maxlen=10) for _ in range(venv.num_envs)]
+        self.should_close = [False] * venv.num_envs
 
     def _next_action(self, id):
 
-        env_state = self.get_env_attr(id, 'get_state')
-
-        robot_pos = env_state['robot']['pos']
-        robot_angle = env_state['robot']['angle']
-        robot_rotation_vector = env_state['robot']['rotation_vector']
-
-        shape_pos = env_state['shape']['pos']
-        shape_angle = env_state['shape']['angle']
-
+        state = self.env_method(id, 'get_state')
+        robot_pos = state.robot.position
+        robot_angle = state.robot.angle
+        robot_rotation_vector = state.robot.rotation_vector
+        shape_pos = state.shape.position
+        shape_angle = state.shape.angle
         robot_vector = robot_rotation_vector.rotated_degrees(90)
+
+        history = self.history[id]
 
         robot_to_shape_dist = shape_pos.get_distance(robot_pos)
         to_shape_vector = (shape_pos - robot_pos).normalized()
-        diff_angle = robot_vector.get_angle_between(to_shape_vector)
 
-        if not self.should_hold and robot_to_shape_dist < 0.4 and len(self.history) >= 3:
-            l = len(self.history)
+        if not self.should_close[id] and robot_to_shape_dist < 0.4 and len(history) >= 3:
+            l = len(history)
             for i in range(l - 3, l - 1):
-                d_now = self.history[i]['robot_to_shape_dist']
-                d_next = self.history[i + 1]['robot_to_shape_dist']
+                d_now = history[i]['robot_to_shape_dist']
+                d_next = history[i + 1]['robot_to_shape_dist']
                 if abs(d_next - d_now) > 0.01:
-                    self.should_hold = True
+                    self.should_close[id] = True
 
         act_flags = [RA.NONE, RA.NONE, RA.OPEN]
 
-        if self.should_hold:
+        if self.should_close[id]:
             act_flags[2] = RA.CLOSE
             goal_pos = pm.vec2d.Vec2d((-1., 1.))
             shape_to_goal_dist = goal_pos.get_distance(shape_pos)
@@ -64,6 +62,7 @@ class MoveToCornerExpert(BaseExpert):
             diff_angle = robot_vector.get_angle_between(to_goal_vector)
             target_dist = shape_to_goal_dist
         else:
+            diff_angle = robot_vector.get_angle_between(to_shape_vector)
             target_dist = robot_to_shape_dist
 
         angle_eps = math.pi / 20
@@ -76,8 +75,8 @@ class MoveToCornerExpert(BaseExpert):
             act_flags[1] = RA.LEFT
 
         cnt_down = 0
-        i = len(self.history) - 1
-        while i >= 0 and self.history[i]['action'][0] == RA.DOWN:
+        i = len(history) - 1
+        while i >= 0 and history[i]['action'][0] == RA.DOWN:
             cnt_down += 1
             i -= 1
 
@@ -88,13 +87,13 @@ class MoveToCornerExpert(BaseExpert):
             should_back_up = True
 
         cnt_unmoved = 0
-        i = len(self.history) - 1
+        i = len(history) - 1
         while i > 0:
-            p1 = self.history[i]['robot_pos']
-            p2 = self.history[i - 1]['robot_pos']
+            p1 = history[i]['robot_pos']
+            p2 = history[i - 1]['robot_pos']
             dp = p1.get_distance(p2)
-            a1 = self.history[i]['robot_angle']
-            a2 = self.history[i - 1]['robot_angle']
+            a1 = history[i]['robot_angle']
+            a2 = history[i - 1]['robot_angle']
             da = abs(a1 - a2)
             if dp > 0.01 or da > 0.01:
                 break
@@ -107,15 +106,14 @@ class MoveToCornerExpert(BaseExpert):
         if should_back_up:
             act_flags[0] = RA.DOWN
             center = pm.vec2d.Vec2d((0, 0))
-            target_vector = (center - robot_pos).normalized()
-            diff_angle = (-robot_vector).get_angle_between(target_vector)
+            to_center_vector = (center - robot_pos).normalized()
+            diff_angle = (-robot_vector).get_angle_between(to_center_vector)
             if diff_angle < 0 and diff_angle >= -math.pi:
                 act_flags[1] = RA.RIGHT
             else:
                 act_flags[1] = RA.LEFT
 
-
-        self.history.append({
+        history.append({
             'action': act_flags,
             'robot_pos': robot_pos,
             'robot_angle': robot_angle,

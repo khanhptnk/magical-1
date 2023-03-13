@@ -22,6 +22,7 @@ class BaseAlgorithm:
             cycle=True, batch_size=config.train.batch_size)
 
         best_rew = {
+            'train_val': -1e9,
             'val': -1e9,
             'test': -1e9
         }
@@ -40,7 +41,7 @@ class BaseAlgorithm:
 
                     for split in ['train_val', 'val', 'test']:
                         eval_stats = defaultdict(list)
-                        eval_dataset = dataset[split].iterate_batches(batch_size=1)
+                        eval_dataset = dataset[split].iterate_batches(batch_size=config.train.batch_size)
 
                         for j, eval_batch in enumerate(eval_dataset):
                             eval_ep_stats = self.eval_episode(
@@ -66,19 +67,18 @@ class BaseAlgorithm:
             self._update_stats_dict(train_stats, train_ep_stats)
 
     def eval_episode(self, i_iter, policy, env, batch):
-
         batch_size = len(batch)
+        for i, item in enumerate(batch):
+            env.env_method('set_init_state', item['init_state'], indices=[i])
         ob = env.reset()
         policy.reset(is_eval=True)
-        self.expert.reset(env)
 
         has_done = [False] * batch_size
         total_reward = [0] * batch_size
         num_steps = [0] * batch_size
 
         while not all(has_done):
-            action = policy.predict(ob, deterministic=True)
-            action = self.expert.predict(ob)
+            action, _ = policy.predict(ob, deterministic=True)
             ob, reward, done, info = env.step(action)
             for i, (r, d) in enumerate(zip(reward, done)):
                 total_reward[i] += r

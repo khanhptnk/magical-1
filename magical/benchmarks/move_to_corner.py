@@ -5,6 +5,7 @@ import warnings
 from gym.utils import EzPickle
 import numpy as np
 
+from utils import Config
 from magical import geom
 from magical.base_env import BaseEnv, ez_init
 import magical.entities as en
@@ -29,14 +30,15 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
                 "ONLY intended for training RL algorithms during debugging, "
                 "so don't forget to disable it when benchmarking IL")
 
-    def on_reset(self, state=None):
+    def on_reset(self):
         # make the robot
+        state = self.init_state
         if state is None:
             robot_pos = np.asarray((0.4, -0.0))
             robot_angle = 0.55 * math.pi
         else:
-            robot_pos = np.asarray(state['robot']['pos'])
-            robot_angle = state['robot_angle']['angle']
+            robot_pos = state.robot.position
+            robot_angle = state.robot.angle
         robot = self._make_robot(robot_pos, robot_angle)
         self.add_entities([robot])
 
@@ -46,10 +48,10 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
             shape_colour = 'red'
             shape_type = en.ShapeType.SQUARE
         else:
-            shape_pos = np.asarray(state['shape']['pos'])
-            shape_angle = state['shape']['angle']
-            shape_colour = state['shape']['colour']
-            shape_type = state['shape']['type']
+            shape_pos = state.shape.position
+            shape_angle = state.shape.angle
+            shape_colour = state.shape.colour
+            shape_type = state.shape.type
 
         if self.rand_shape_colour:
             shape_colour = self.rng.choice(
@@ -72,8 +74,8 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
                 self.rng,
                 rand_pos=True,
                 rand_rot=True,
-                rel_pos_linf_limits=self.JITTER_POS_BOUND,
-                rel_rot_limits=self.JITTER_ROT_BOUND
+                #rel_pos_linf_limits=self.JITTER_POS_BOUND,
+                #rel_rot_limits=self.JITTER_ROT_BOUND
             )
 
     @property

@@ -122,7 +122,12 @@ class BaseEnv(gym.Env, abc.ABC):
         # common randomisation option for all envs
         self.rand_dynamics = rand_dynamics
 
-        self.seed()
+        self.init_state = None
+
+        self.seed(config.seed)
+
+    def set_init_state(self, state):
+        self.init_state = state
 
     def action_to_flags(self, int_action):
         """Parse a 'flat' integer action into a combination of flags."""
@@ -188,7 +193,7 @@ class BaseEnv(gym.Env, abc.ABC):
     def get_robot_state(self):
         return self.robot.get_state()
 
-    def reset(self, state=None):
+    def reset(self):
         self._episode_steps = 0
         # delete old entities/space
         self._entities = []
@@ -224,7 +229,7 @@ class BaseEnv(gym.Env, abc.ABC):
         self._arena_w = arena_r - arena_l
         self._arena_h = arena_t - arena_b
         self.add_entities([self._arena])
-        reset_rv = self.on_reset(state=state)
+        reset_rv = self.on_reset()
         assert reset_rv is None, \
             f"on_reset method of {type(self)} returned {reset_rv}, but "\
             f"should return None"

@@ -2,6 +2,7 @@ import os
 import json
 import random
 import logging
+import pickle
 
 import numpy as np
 
@@ -29,8 +30,9 @@ class Dataset:
 
         file_name = os.path.join(self.data_dir, split + '.json')
 
-        with open(file_name) as f:
-            data = json.load(f)
+        with open(file_name, 'rb') as f:
+            #data = json.load(f)
+            data = pickle.load(f)
 
         return data
 
@@ -64,14 +66,12 @@ class DataSplit:
             batch = self.data[self.idx : (self.idx + batch_size)]
 
             if len(batch) < batch_size:
-                print(len(self.data))
                 batch += self.random.sample(self.data, batch_size - len(batch))
+
+            self.idx += batch_size
+            if self.idx >= len(self.data):
                 self.random.shuffle(self.data)
                 self.idx = 0
-            else:
-                self.idx += batch_size
-                if self.idx >= len(self.data):
-                    self.idx = 0
 
             if batch:
                 yield batch
