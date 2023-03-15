@@ -86,7 +86,8 @@ class BaseAlgorithm:
 
                     policy.save('%s/last.ckpt' % config.exp_dir)
 
-                wandb.log(wandb_stats)
+                if config.use_wandb:
+                    wandb.log(wandb_stats)
 
             if config.eval_mode:
                 break
