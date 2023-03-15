@@ -67,8 +67,9 @@ class BaseAlgorithm:
                                 j, policy, eval_env, eval_batch, save_video=save_video)
                             self._update_stats_dict(eval_stats, eval_ep_stats)
                             if save_video:
+                                print(j)
                                 for k, v in eval_ep_stats['video_frames'].items():
-                                    video_name = '_'.join(split, 'example', k, str(j // save_video_every))
+                                    video_name = '_'.join([split, 'example', k, str(j // save_video_every)])
                                     wandb_stats[video_name] = wandb.Video(np.array(v), fps=4, format='gif')
 
                         avg_rew = np.average(eval_stats['reward'])

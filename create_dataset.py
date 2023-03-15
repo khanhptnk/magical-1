@@ -4,7 +4,6 @@ import json
 import gym
 
 import jsonargparse
-import jsonpickle
 import pickle
 import flags
 import utils
@@ -39,7 +38,6 @@ def create_set(name, env, expert, n_points):
                 has_dones[i] |= d
         print(rewards)
         for s, a_seq, r_seq in zip(init_states, action_seqs, reward_seqs):
-            #print(a_seq)
             id += 1
             points.append(dict(id='%s_%d' % (name, id),
                                init_state=s,

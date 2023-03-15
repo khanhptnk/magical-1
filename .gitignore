@@ -3,6 +3,7 @@
 .#*
 *.swp
 *~
+slurm_scripts/
 demos/
 demos-old/
 scratch/
