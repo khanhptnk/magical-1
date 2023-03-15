@@ -127,6 +127,9 @@ def setup(yaml_file_or_str, flags=None):
     logging.info('Write log to %s' % log_file)
     logging.info(str(config))
 
+    if config.eval_mode:
+        config.use_wandb = 0
+
     if config.use_wandb:
         wandb.init(
             project='inferlearn',

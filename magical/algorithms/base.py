@@ -107,7 +107,7 @@ class BaseAlgorithm:
         num_steps = [0] * batch_size
 
         if save_video:
-            view = 'allo' if self.config.env.view == 'A' else 'ego'
+            view = 'allo' if 'A' in self.config.env.resolution else 'ego'
             frame = env.env_method('render', mode='rgb_array', indices=[0])[0]
             video_frames = {}
             video_frames['allo'] = [utils.hwc_to_chw(frame['allo'])]
