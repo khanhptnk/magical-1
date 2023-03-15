@@ -112,24 +112,21 @@ class MagicalPolicy(BasePolicy):
         logits = self.action_net(latent_pi)
         distribution = self._get_action_dist_from_latent(logits)
         actions = distribution.get_actions(deterministic=deterministic)
-        #log_prob = distribution.log_prob(actions)
         actions = actions.reshape((-1,) + self.action_space.shape)
         return actions, logits
 
     def get_distribution(self, obs):
-        features = super().extract_features(obs, self.features_extractor)
-        latent_pi = self.mlp_extractor(features)
+        pi_features = self.extract_features(obs)
+        latent_pi = self.mlp_extractor(pi_features)
         logits = self.action_net(latent_pi)
         return self._get_action_dist_from_latent(logits)
 
     def _predict(self, obs, deterministic=False):
-        return self.get_distribution(obs).get_actions(deterministic=deterministic)
+        actions = self.get_distribution(obs).get_actions(deterministic=deterministic)
+        return actions
 
     def reset(self, is_eval=False):
-        if is_eval:
-            self.eval()
-        else:
-            self.train()
+        self.train(not is_eval)
 
     def save(self, path):
         checkpoint = {}

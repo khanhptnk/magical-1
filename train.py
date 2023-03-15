@@ -10,6 +10,9 @@ import utils
 import magical
 magical.register_envs()
 
+import torch
+torch.backends.cudnn.deterministic = True
+
 from magical.dataset import Dataset
 from magical.models import MAGICALNet, MAGICALCNN
 from magical.policies import MagicalPolicy

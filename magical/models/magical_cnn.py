@@ -4,7 +4,8 @@ from stable_baselines3.common.preprocessing import preprocess_obs
 
 import torch
 import torch.nn as nn
-from torchvision.models.resnet import BasicBlock as BasicResidualBlock
+#from torchvision.models.resnet import BasicBlock as BasicResidualBlock
+from magical.models.resnet import BasicResidualBlock, MyGroupNorm, WSConv2d
 
 
 NETWORK_ARCHITECTURE_DEFINITIONS = {
@@ -58,6 +59,8 @@ class MAGICALCNN(nn.Module):
     def __init__(self,
                  observation_space,
                  representation_dim=128,
+                 conv2d_layer=WSConv2d,
+                 norm_layer=MyGroupNorm,
                  use_bn=True,
                  dropout=None,
                  use_sn=False,
@@ -85,11 +88,12 @@ class MAGICALCNN(nn.Module):
             if layer_definition.get('residual', False):
                 block_kwargs = {
                     'stride': layer_stride,
-                    'downsample': nn.Sequential(nn.Conv2d(in_dim,
-                                                          layer_out_dim,
-                                                          kernel_size=1,
-                                                          stride=layer_stride),
-                                                nn.BatchNorm2d(layer_out_dim))
+                    'downsample': nn.Sequential(conv2d_layer(in_dim,
+                                                            layer_out_dim,
+                                                            kernel_size=1,
+                                                            stride=layer_stride),
+                                                norm_layer(layer_out_dim)),
+                    'norm_layer': norm_layer
                 }
                 conv_layers += [block(in_dim,
                                       layer_out_dim * w,
@@ -105,7 +109,8 @@ class MAGICALCNN(nn.Module):
                     'stride': layer_stride,
                     'kernel_size': layer_kernel_size,
                     'padding': layer_padding,
-                    'use_bn': use_bn,
+                    'conv2d_layer': conv2d_layer,
+                    'norm_layer': norm_layer,
                     'use_sn': use_sn,
                     'dropout': dropout,
                     'activation_cls': ActivationCls
@@ -116,7 +121,7 @@ class MAGICALCNN(nn.Module):
 
             in_dim = layer_out_dim*w
         if 'resnet' in arch_str:
-            conv_layers.append(nn.Conv2d(in_dim, 32, 1))
+            conv_layers.append(conv2d_layer(in_dim, 32, 1))
         conv_layers.append(nn.Flatten())
 
         fc_layers = []
@@ -167,15 +172,25 @@ def compute_output_shape(observation_space, layers, device=None):
     # return everything else
     return sample.shape[1:]
 
-def magical_conv_block(in_chans, out_chans, kernel_size, stride, padding, use_bn, use_sn, dropout, activation_cls):
+def magical_conv_block(in_chans,
+                       out_chans,
+                       kernel_size,
+                       stride,
+                       padding,
+                       conv2d_layer,
+                       norm_layer,
+                       use_sn,
+                       dropout,
+                       activation_cls):
+
     # We sometimes disable bias because batch norm has its own bias.
-    conv_layer = nn.Conv2d(
+    conv_layer = conv2d_layer(
         in_chans,
         out_chans,
         kernel_size=kernel_size,
         stride=stride,
         padding=padding,
-        bias=not use_bn,
+        bias=norm_layer is None,
         padding_mode='zeros')
 
     if use_sn:
@@ -191,11 +206,7 @@ def magical_conv_block(in_chans, out_chans, kernel_size, stride, padding, use_bn
 
     layers.append(activation_cls())
 
-    if use_bn:
-        # Insert BN layer after convolution (and optionally after
-        # dropout). I doubt order matters much, but see here for
-        # CONTROVERSY:
-        # https://github.com/keras-team/keras/issues/1802#issuecomment-187966878
-        layers.append(nn.BatchNorm2d(out_chans))
+    if norm_layer is not None:
+        layers.append(norm_layer(out_chans))
 
     return layers

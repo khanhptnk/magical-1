@@ -11,11 +11,15 @@ def parse():
     parser.add_argument('-device', type=int)
     parser.add_argument('-eval_mode', type=int)
     parser.add_argument('-data_dir', type=str)
+    parser.add_argument('-use_wandb', type=int, default=1)
+    parser.add_argument('-wandb_id', type=str)
 
     parser.add_argument('-env.resolution', type=str)
+    parser.add_argument('-env.view', type=str)
 
     parser.add_argument('-train.log_every', type=int)
     parser.add_argument('-train.batch_size', type=int)
+    parser.add_argument('-train.eval_split', type=str)
 
     parser.add_argument('-policy.lr', type=float)
     parser.add_argument('-policy.load_from', type=str)

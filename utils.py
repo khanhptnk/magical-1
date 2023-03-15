@@ -5,6 +5,7 @@ import logging
 import random
 import yaml
 from datetime import datetime
+import wandb
 
 import numpy as np
 import gym
@@ -71,6 +72,15 @@ class Config:
         except KeyError:
             return None
 
+    def to_dict(self):
+        d = {}
+        for k, v in self.__dict__.items():
+            if isinstance(v, Config):
+                d[k] = v.to_dict()
+            else:
+                d[k] = v
+        return d
+
     def __getstate__(self):
         return self.__dict__
 
@@ -117,6 +127,15 @@ def setup(yaml_file_or_str, flags=None):
     logging.info('Write log to %s' % log_file)
     logging.info(str(config))
 
+    if config.use_wandb:
+        wandb.init(
+            project='inferlearn',
+            group='magical',
+            name=config.name,
+            id=config.wandb_id,
+            config=config.to_dict()
+        )
+
     return config
 
 def config_logging(log_file):
@@ -151,3 +170,6 @@ def make_env(env_id, rank, config):
         env.seed(config.seed + rank)
         return env
     return _init
+
+def hwc_to_chw(img):
+    return img.transpose((2, 0, 1))
