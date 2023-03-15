@@ -38,11 +38,12 @@ def create_set(name, env, expert, n_points):
                 has_dones[i] |= d
         print(rewards)
         for s, a_seq, r_seq in zip(init_states, action_seqs, reward_seqs):
-            id += 1
             points.append(dict(id='%s_%d' % (name, id),
                                init_state=s,
                                actions=a_seq,
                                rewards=r_seq))
+            id += 1
+
     return points
 
 def save_all(data):
@@ -61,8 +62,7 @@ if __name__ == '__main__':
     config_file, more_flags = flags.parse()
     config = utils.make_config(config_file, more_flags)
 
-    env_id = '%s-TestAllButDynamics-%s%s-v0' % \
-        (config.env.name, config.env.resolution, config.env.view)
+    env_id = '%s-TestAllButDynamics-%s-v0' % (config.env.name, config.env.resolution)
 
     env = SubprocVecEnv([utils.make_env(env_id, i, config) for i in range(config.train.batch_size)])
     expert = expert_factory.load(config, env.observation_space, env.action_space, None)
