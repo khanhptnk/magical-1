@@ -59,15 +59,17 @@ class BaseAlgorithm:
                     for split in eval_splits:
                         eval_stats = defaultdict(list)
                         eval_dataset = dataset[split].iterate_batches(batch_size=config.train.batch_size)
+                        save_video_every = len(dataset[split]) // 5
 
                         for j, eval_batch in enumerate(eval_dataset):
-                            save_video = (j == 0)
+                            save_video = (j % save_video_every == 0)
                             eval_ep_stats = self.eval_episode(
                                 j, policy, eval_env, eval_batch, save_video=save_video)
                             self._update_stats_dict(eval_stats, eval_ep_stats)
                             if save_video:
                                 for k, v in eval_ep_stats['video_frames'].items():
-                                    wandb_stats['example_' + k] = wandb.Video(np.array(v), fps=4, format='gif')
+                                    video_name = '_'.join(split, 'example', k, str(j // save_video_every))
+                                    wandb_stats[video_name] = wandb.Video(np.array(v), fps=4, format='gif')
 
                         avg_rew = np.average(eval_stats['reward'])
                         avg_steps = np.average(eval_stats['num_steps'])

@@ -22,7 +22,8 @@ class Dataset:
                 if self.config.train_subset:
                     self.data[split] = self.data[split][:self.config.train_subset]
                 self.data[split + '_val'] = DataSplit(self.random.sample(
-                    self.data[split].data, max(config.train.batch_size, len(self.data[split]) // 20)),
+                    self.data[split].data, max(config.train.batch_size,
+                                           min(100, len(self.data[split]) // 20))),
                     seed=seed)
 
         for split in self.data:
