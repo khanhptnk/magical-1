@@ -30,6 +30,8 @@ class BaseAlgorithm:
             'val': -1e9,
             'test': -1e9
         }
+        max_videos = 5
+        save_video_ids = defaultdict(set)
 
         for i, train_batch in zip(range(config.train.n_iters + 1), train_dataset):
 
@@ -59,17 +61,17 @@ class BaseAlgorithm:
                     for split in eval_splits:
                         eval_stats = defaultdict(list)
                         eval_dataset = dataset[split].iterate_batches(batch_size=config.train.batch_size)
-                        save_video_every = len(dataset[split]) // 5
+                        save_video_every = len(dataset[split]) // max_videos
 
                         for j, eval_batch in enumerate(eval_dataset):
-                            save_video = (j % save_video_every == 0)
+                            if len(save_video_ids[split]) < max_videos:
+                                save_video_ids[split].add(eval_batch[0]['id'])
                             eval_ep_stats = self.eval_episode(
-                                j, policy, eval_env, eval_batch, save_video=save_video)
+                                j, policy, eval_env, eval_batch, save_video_ids[split])
                             self._update_stats_dict(eval_stats, eval_ep_stats)
-                            if save_video:
-                                print(j)
-                                for k, v in eval_ep_stats['video_frames'].items():
-                                    video_name = '_'.join([split, 'example', k, str(j // save_video_every)])
+                            for (_, id), frames in eval_ep_stats['video_frames'].items():
+                                for k, v in frames.items():
+                                    video_name = 'example_%s_%s_%s' % (split, id, k)
                                     wandb_stats[video_name] = wandb.Video(np.array(v), fps=4, format='gif')
 
                         avg_rew = np.average(eval_stats['reward'])
@@ -98,7 +100,13 @@ class BaseAlgorithm:
             train_ep_stats = self.train_episode(i, policy, train_env, train_batch)
             self._update_stats_dict(train_stats, train_ep_stats)
 
-    def eval_episode(self, i_iter, policy, env, batch, save_video=False):
+    def eval_episode(self, i_iter, policy, env, batch, save_video_ids):
+
+        def _add_frame(i, frames):
+            frame = env.env_method('render', mode='rgb_array', indices=[i])[0]
+            frames['allo'].append(utils.hwc_to_chw(frame['allo']))
+            frames['robot_' + view].append(utils.hwc_to_chw(frame[view]))
+
         for i, item in enumerate(batch):
             env.env_method('set_init_state', item['init_state'], indices=[i])
         ob = env.reset()
@@ -109,24 +117,22 @@ class BaseAlgorithm:
         total_reward = [0] * batch_size
         num_steps = [0] * batch_size
 
-        if save_video:
-            view = 'allo' if 'A' in self.config.env.resolution else 'ego'
-            frame = env.env_method('render', mode='rgb_array', indices=[0])[0]
-            video_frames = {}
-            video_frames['allo'] = [utils.hwc_to_chw(frame['allo'])]
-            video_frames['robot_' + view] = [utils.hwc_to_chw(frame[view])]
-        else:
-            video_frames = None
+        video_frames = {}
+        for i, item in enumerate(batch):
+            if item['id'] in save_video_ids:
+                video_frames[(i, item['id'])] = defaultdict(list)
+        view = 'allo' if 'A' in self.config.env.resolution else 'ego'
+
+        for (i, _), v in video_frames.items():
+            _add_frame(i, v)
 
         cnt = 0
         while not all(has_done):
             action, _ = policy.predict(ob, deterministic=True)
             ob, reward, done, info = env.step(action)
 
-            if save_video:
-                frame = env.env_method('render', mode='rgb_array', indices=[0])[0]
-                video_frames['allo'].append(utils.hwc_to_chw(frame['allo']))
-                video_frames['robot_' + view].append(utils.hwc_to_chw(frame[view]))
+            for (i, _), v in video_frames.items():
+                _add_frame(i, v)
 
             for i, (r, d) in enumerate(zip(reward, done)):
                 total_reward[i] += r
