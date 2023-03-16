@@ -53,7 +53,6 @@ def save_all(data):
     for split in SPLITS:
         path = '%s/%s.json' % (data_dir, split)
         with open(path, 'wb') as f:
-            #json.dump(data[split], f)
             pickle.dump(data[split], f, pickle.HIGHEST_PROTOCOL)
         print('Saved %s data with %d examples to %s' % (split, len(data[split]), path))
 
@@ -67,14 +66,19 @@ if __name__ == '__main__':
     eval_env_id = '%s-%s-%s-v0' %
         (config.env.name, config.env.eval_cond, config.env.resolution)
 
-    eval_env = SubprocVecEnv([utils.make_env(env_id, i, config) for i in range(config.train.batch_size)])
-    eval_env = SubprocVecEnv([utils.make_env(env_id, i, config) for i in range(config.train.batch_size)])
+    print('train env', train_env_id)
+    print('eval env', eval_env_id)
+
+    train_env = SubprocVecEnv([utils.make_env(train_env_id, i, config)
+        for i in range(config.train.batch_size)])
+    eval_env = SubprocVecEnv([utils.make_env(eval_env_id, i, config)
+        for i in range(config.train.batch_size)])
 
     expert = expert_factory.load(config, env.observation_space, env.action_space, None)
 
     data = {}
     data['train'] = create_set('train', train_env, expert, config.dataset.n_train)
-    data['val']   = create_set('val', eval_env, expert, config.dataset.n_eval)
+    data['val']   = create_set('val', train_env, expert, config.dataset.n_eval)
     data['test']  = create_set('test', eval_env, expert, config.dataset.n_eval)
 
     save_all(data)
