@@ -61,9 +61,9 @@ if __name__ == '__main__':
     config_file, more_flags = flags.parse()
     config = utils.make_config(config_file, more_flags)
 
-    train_env_id = '%s-%s-%s-v0' %
+    train_env_id = '%s-%s-%s-v0' % \
         (config.env.name, config.env.train_cond, config.env.resolution)
-    eval_env_id = '%s-%s-%s-v0' %
+    eval_env_id = '%s-%s-%s-v0' % \
         (config.env.name, config.env.eval_cond, config.env.resolution)
 
     print('train env', train_env_id)
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     eval_env = SubprocVecEnv([utils.make_env(eval_env_id, i, config)
         for i in range(config.train.batch_size)])
 
-    expert = expert_factory.load(config, env.observation_space, env.action_space, None)
+    expert = expert_factory.load(config, train_env.observation_space, train_env.action_space, None)
 
     data = {}
     data['train'] = create_set('train', train_env, expert, config.dataset.n_train)
