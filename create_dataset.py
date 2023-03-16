@@ -62,15 +62,19 @@ if __name__ == '__main__':
     config_file, more_flags = flags.parse()
     config = utils.make_config(config_file, more_flags)
 
-    env_id = '%s-TestAllButDynamics-%s-v0' % (config.env.name, config.env.resolution)
+    train_env_id = '%s-%s-%s-v0' %
+        (config.env.name, config.env.train_cond, config.env.resolution)
+    eval_env_id = '%s-%s-%s-v0' %
+        (config.env.name, config.env.eval_cond, config.env.resolution)
 
-    env = SubprocVecEnv([utils.make_env(env_id, i, config) for i in range(config.train.batch_size)])
+    eval_env = SubprocVecEnv([utils.make_env(env_id, i, config) for i in range(config.train.batch_size)])
+    eval_env = SubprocVecEnv([utils.make_env(env_id, i, config) for i in range(config.train.batch_size)])
+
     expert = expert_factory.load(config, env.observation_space, env.action_space, None)
-    create_set_fn = lambda n_points, name: create_set(name, env, expert, n_points)
 
     data = {}
-    data['train'] = create_set_fn(config.dataset.n_train, 'train')
-    data['val']   = create_set_fn(config.dataset.n_eval, 'val')
-    data['test']  = create_set_fn(config.dataset.n_eval, 'test')
+    data['train'] = create_set('train', train_env, expert, config.dataset.n_train)
+    data['val']   = create_set('val', eval_env, expert, config.dataset.n_eval)
+    data['test']  = create_set('test', eval_env, expert, config.dataset.n_eval)
 
     save_all(data)
