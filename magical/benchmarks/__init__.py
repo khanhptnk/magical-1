@@ -591,6 +591,13 @@ def register_envs():
              'rand_dynamics': False,
          }),
         ('magical.benchmarks.move_to_region:MoveToRegionEnv',
+         'MoveToRegion-TestAllButDynamics-v0', mtr_ep_len, {
+             'rand_poses_minor': False,
+             'rand_poses_full': True,
+             'rand_goal_colour': True,
+             'rand_dynamics': False,
+         }),
+        ('magical.benchmarks.move_to_region:MoveToRegionEnv',
          'MoveToRegion-TestJitter-v0', mtr_ep_len, {
              'rand_poses_minor': True,
              'rand_poses_full': False,

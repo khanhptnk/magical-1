@@ -1,4 +1,5 @@
 import math
+import argparse
 
 from gym.utils import EzPickle
 import numpy as np
@@ -211,3 +212,15 @@ class MatchRegionsEnv(BaseEnv, EzPickle):
         #   there's also contamination (more contamination = worse, fewer
         #   target shapes in target region = worse).
         return target_frac_done * (1 - contamination_rate)
+
+    def get_state(self):
+        state = argparse.Namespace()
+        state.target_shapes = []
+        state.distractor_shapes = []
+        for s in self.__target_shapes:
+            state.target_shapes.append(s.get_state())
+        for s in self.__distractor_shapes:
+            state.distractor_shapes.append(s.get_state())
+        state.sensor = sensor.get_state()
+        return state
+

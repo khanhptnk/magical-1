@@ -98,8 +98,6 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
         if self.debug_reward:
             # dense reward for training RL
             rew = self.debug_shaped_reward()
-        if self.config.eval_mode:
-            self.render(mode='human')
         return obs, rew, done, info
 
     def debug_shaped_reward(self):

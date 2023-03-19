@@ -1,3 +1,4 @@
+import argparse
 from gym.utils import EzPickle
 import numpy as np
 
@@ -28,28 +29,35 @@ class MoveToRegionEnv(BaseEnv, EzPickle):
         self.rand_goal_colour = rand_goal_colour
 
     def on_reset(self):
-        goal_xyhw = DEFAULT_GOAL_XYHW
-        if self.rand_poses_minor or self.rand_poses_full:
-            # randomise width and height of goal region
-            # (unfortunately this has to be done before pose randomisation b/c
-            # I don't have an easy way of changing size later)
-            if self.rand_poses_minor:
-                hw_bound = self.JITTER_TARGET_BOUND
-            else:
-                hw_bound = None
-            sampled_hw = geom.randomise_hw(self.RAND_GOAL_MIN_SIZE,
-                                           self.RAND_GOAL_MAX_SIZE,
-                                           self.rng,
-                                           current_hw=goal_xyhw[2:],
-                                           linf_bound=hw_bound)
-            goal_xyhw = (*goal_xyhw[:2], *sampled_hw)
-
-        # colour the goal region
-        if self.rand_goal_colour:
-            goal_colour = self.rng.choice(
-                np.asarray(en.SHAPE_COLOURS, dtype='object'))
+        state = self.init_state
+        if state is None:
+            goal_xyhw = DEFAULT_GOAL_XYHW
+            if self.rand_poses_minor or self.rand_poses_full:
+                # randomise width and height of goal region
+                # (unfortunately this has to be done before pose randomisation b/c
+                # I don't have an easy way of changing size later)
+                if self.rand_poses_minor:
+                    hw_bound = self.JITTER_TARGET_BOUND
+                else:
+                    hw_bound = None
+                sampled_hw = geom.randomise_hw(self.RAND_GOAL_MIN_SIZE,
+                                            self.RAND_GOAL_MAX_SIZE,
+                                            self.rng,
+                                            current_hw=goal_xyhw[2:],
+                                            linf_bound=hw_bound)
+                goal_xyhw = (*goal_xyhw[:2], *sampled_hw)
         else:
-            goal_colour = DEFAULT_GOAL_COLOUR
+            goal_xyhw = (state.x, state.y, state.h, state.w)
+
+        if state is None:
+            # colour the goal region
+            if self.rand_goal_colour:
+                goal_colour = self.rng.choice(
+                    np.asarray(en.SHAPE_COLOURS, dtype='object'))
+            else:
+                goal_colour = DEFAULT_GOAL_COLOUR
+        else:
+            goal_colour = state.colour_name
 
         # place the goal region
         assert len(goal_xyhw) == 4, goal_xyhw
@@ -58,8 +66,12 @@ class MoveToRegionEnv(BaseEnv, EzPickle):
         self.__goal_ref = goal
 
         # now place the robot
-        default_robot_pos, default_robot_angle = DEFAULT_ROBOT_POSE
-        robot = self._make_robot(default_robot_pos, default_robot_angle)
+        if state is None:
+            robot_pos, robot_angle = DEFAULT_ROBOT_POSE
+        else:
+            robot_pos = state.robot.position
+            robot_angle = state.robot.angle
+        robot = self._make_robot(robot_pos, robot_angle)
         self.add_entities([robot])
         self.__robot_ent_index = en.EntityIndex([robot])
 
@@ -80,7 +92,8 @@ class MoveToRegionEnv(BaseEnv, EzPickle):
                                         rand_pos=True,
                                         rand_rot=(False, True),
                                         rel_pos_linf_limits=pos_limits,
-                                        rel_rot_limits=rot_limits)
+                                        rel_rot_limits=rot_limits
+            )
 
     def score_on_end_of_traj(self):
         # this one just has a lazy binary reward
@@ -92,3 +105,13 @@ class MoveToRegionEnv(BaseEnv, EzPickle):
             reward = 0.0
         assert 0 <= reward <= 1
         return reward
+
+    @property
+    def goal_region(self):
+        return self.__goal_ref
+
+    def get_state(self):
+        state = argparse.Namespace()
+        state.robot = self.robot.get_state()
+        state.goal = self.goal_region.get_state()
+        return state

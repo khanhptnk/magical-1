@@ -1,0 +1,21 @@
+name: 'move_to_region_bc'
+data_dir: 'data/move_to_region'
+env:
+  name: MoveToRegion
+  resolution: LoResCHW4E
+  train_cond: 'TestAllButDynamics'
+  eval_cond: 'TestAllButDynamics'
+expert:
+  name: MoveToRegionExpert
+train:
+  n_iters: 10000
+  log_every: 100
+  batch_size: 5
+policy:
+  name: MagicalPolicy
+  lr: 0.0001
+  image_feat_dim: 256 
+  net_arch: [256]
+algorithm:
+  name: BehaviorCloning
+device: 0 

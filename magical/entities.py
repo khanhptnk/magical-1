@@ -883,3 +883,13 @@ class GoalRegion(Entity):
         self.goal_xform.reset(
             translation=self.goal_body.position,
             rotation=self.goal_body.angle)
+
+    def get_state(self):
+        state = argparse.Namespace()
+        state.position = self.goal_body.position
+        state.w = self.w
+        state.h = self.h
+        state.x = self.x
+        state.y = self.y
+        state.colour_name = self.colour_name
+        return state

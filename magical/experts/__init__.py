@@ -1,4 +1,5 @@
 from magical.experts.move_to_corner import MoveToCornerExpert
+from magical.experts.move_to_region import MoveToRegionExpert
 
 def load(config, *args):
     name = config.expert.name
