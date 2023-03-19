@@ -35,8 +35,6 @@ class BaseAlgorithm:
 
         for i, train_batch in zip(range(config.train.n_iters + 1), train_dataset):
 
-            print(i)
-
             if i % config.train.log_every == 0:
 
                 wandb_stats['iter'] = i
