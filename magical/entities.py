@@ -889,7 +889,5 @@ class GoalRegion(Entity):
         state.position = self.goal_body.position
         state.w = self.w
         state.h = self.h
-        state.x = self.x
-        state.y = self.y
         state.colour_name = self.colour_name
         return state

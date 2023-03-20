@@ -121,7 +121,7 @@ def setup(yaml_file_or_str, flags=None):
         log_file = os.path.join(config.exp_dir, 'eval.log')
     else:
         log_file = os.path.join(config.exp_dir, 'train.log')
-    config_logging(log_file)
+    configure_logging(log_file)
     logging.info('python -u ' + ' '.join(sys.argv))
     logging.info(str(datetime.now()))
     logging.info('Write log to %s' % log_file)
@@ -141,7 +141,7 @@ def setup(yaml_file_or_str, flags=None):
 
     return config
 
-def config_logging(log_file):
+def configure_logging(log_file):
 
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(ElapsedFormatter())

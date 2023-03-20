@@ -8,7 +8,7 @@ import pymunk as pm
 import torch
 
 from magical.base_env import BaseEnv
-from magical.experts.base import BaseExpert
+from magical.experts.base import BaseExpert, PickAndPlaceExpert
 from magical.entities import RobotAction as RA
 
 
@@ -27,120 +27,86 @@ class MatchRegionsExpert(BaseExpert):
     def reset(self, venv):
         self.venv = venv
         self.history = [deque(maxlen=10) for _ in range(venv.num_envs)]
+        self.pick_and_place_expert = [None] * venv.num_envs
+        self.picked_shape = (None, None)
+
+    def _is_inside(self, sensor, shape):
+        sensor_x = sensor.position.x - sensor.w / 2
+        sensor_y = sensor.position.y + sensor.h / 2
+        return sensor_x + BaseEnv.SHAPE_RAD <= shape.position.x <= sensor_x + sensor.w - BaseEnv.SHAPE_RAD and \
+               sensor_y - sensor.h + BaseEnv.SHAPE_RAD <= shape.position.y <= sensor_y - BaseEnv.SHAPE_RAD
+
+    def _can_put(self, point, rad):
+        r = BaseEnv.SHAPE_RAD
+        return -1 + r <= point.x <= 1 - r and -1 + r <= point.y <= 1 - r
 
     def _next_action(self, id):
-
         state = self.env_method(id, 'get_state')
-        robot_pos = state.robot.position
-        robot_angle = state.robot.angle
-        robot_rotation_vector = state.robot.rotation_vector
-        robot_vector = robot_rotation_vector.rotated_degrees(90)
-
+        robot = state.robot
         target_shapes = state.target_shapes
-
+        distractor_shapes = state.distractor_shapes
         sensor = state.sensor
-        l = sqrt(math.pi) * BaseEnv.SHAPE_RAD + 0.05
-        slots = []
-        for i in range(sensor.w // l):
-            for j in range(sensor.h // l):
-                slots.append(pm.vec2d.Vec2d(sensor.x + i * l, sensor.y - j * l))
 
-        free_slots = []
-        for i, slot in enumerate(slots):
-            d = None
-            for shape in target_shapes:
-                this_d = slot.get_distance(shape.position)
-                if this_d < d:
-                    d = this_d
-            if d >= 0.05:
-                free_slots.append(slot)
+        expert = self.pick_and_place_expert[id]
 
-        best_d = 1e9
-        best_shape = None
-        for shape in target_shapes:
-            d = None
-            for slot in free_slots:
-                this_d = slot.get_distance(shape.position)
-                if this_d < d:
-                    d = this_d
-            if d >= 0.05 and d < best_d:
-                best_d = d
-                best_shape = shape
-
-
-
-
-        history = self.history[id]
-
-        robot_to_goal_dist = goal_pos.get_distance(robot_pos)
-        to_goal_vector = (goal_pos - robot_pos).normalized()
-
-        act_flags = [RA.NONE, RA.NONE, RA.OPEN]
-
-        diff_angle = robot_vector.get_angle_between(to_goal_vector)
-        target_dist = robot_to_goal_dist
-
-        if target_dist > 0.05:
-
-            angle_eps = math.pi / 20
-
-            if abs(diff_angle) < angle_eps:
-                act_flags[0] = RA.UP
-            elif diff_angle < 0 and diff_angle >= -math.pi:
-                act_flags[1] = RA.RIGHT
-            else:
-                act_flags[1] = RA.LEFT
-
-            cnt_down = 0
-            i = len(history) - 1
-            while i >= 0 and history[i]['action'][0] == RA.DOWN:
-                cnt_down += 1
-                i -= 1
-
-            should_back_up = False
-
-            # continue back up
-            if cnt_down > 0 and cnt_down < 10:
-                should_back_up = True
-
-            cnt_unmoved = 0
-            i = len(history) - 1
-            while i > 0:
-                p1 = history[i]['robot_pos']
-                p2 = history[i - 1]['robot_pos']
-                dp = p1.get_distance(p2)
-                a1 = history[i]['robot_angle']
-                a2 = history[i - 1]['robot_angle']
-                da = abs(a1 - a2)
-                if dp > 0.01 or da > 0.01:
+        if expert is None:
+            self.picked_shape = (None, None)
+            for i, shape in enumerate(distractor_shapes):
+                if self._is_inside(sensor, shape):
+                    self.picked_shape = ('distractor', i)
                     break
-                cnt_unmoved += 1
-                i -= 1
 
-            if target_dist >= 0.3 and cnt_unmoved >= 3:
-                should_back_up = True
+            if self.picked_shape[0] is None:
+                for i, shape in enumerate(target_shapes):
+                    if not self._is_inside(sensor, shape):
+                        self.picked_shape = ('target', i)
+                        break
+                if self.picked_shape[0] is None:
+                    return 0
 
-            if should_back_up:
-                act_flags[0] = RA.DOWN
-                center = pm.vec2d.Vec2d((0, 0))
-                to_center_vector = (center - robot_pos).normalized()
-                diff_angle = (-robot_vector).get_angle_between(to_center_vector)
-                if diff_angle < 0 and diff_angle >= -math.pi:
-                    act_flags[1] = RA.RIGHT
-                else:
-                    act_flags[1] = RA.LEFT
+                # check if a distractor is hindering the path to a target
+                target_shape = target_shapes[self.
+                hindering_distractor_shape = None
+                robot_to_target_vector = (target_shape.position - robot.position).normalized()
+                robot_to_target_dist = target_shape.position.get_distance(robot.position)
+                for i, shape in enumerate(distractor_shapes):
+                    projected_distractor = shape.position.projection(robot_to_target_vector)
+                    projected_distractor_to_distractor_dist = shape.get_distance(projected_distractor)
+                    robot_to_distractor_dist = shape.position.get_distance(robot.position)
+                    if projected_distractor_to_distractor_dist < BaseEnv.SHAPE_RAD and \
+                       robot_to_distractor_dist < robot_to_target_dist:
 
-        history.append({
-            'action': act_flags,
-            'robot_pos': robot_pos,
-            'robot_angle': robot_angle,
-            'robot_to_goal_dist': robot_to_goal_dist
-        })
+
+                goal_pos = sensor.position
+            else:
+                # choose where to put distractor
+                r = BaseEnv.SHAPE_RAD
+                points = [ pm.vec2d.Vec2d(sensor.position.x - sensor.w / 2 - r, sensor.position.y - sensor.h / 2 - r),
+                           pm.vec2d.Vec2d(sensor.position.x - sensor.w / 2 - r, sensor.position.y + sensor.h / 2 + r),
+                           pm.vec2d.Vec2d(sensor.position.x + sensor.w / 2 + r, sensor.position.y - sensor.h / 2 - r),
+                           pm.vec2d.Vec2d(sensor.position.x + sensor.w / 2 + r, sensor.position.y + sensor.h / 2 + r)]
+                best_p = (None, None)
+                distractor_shape = distractor_shapes[self.picked_shape[1]]
+                for p in points:
+                    if self._can_put(p):
+                        d = p.get_distance(distractor_shape)
+                        if d < best_corner[0]:
+                            best_p = (d, p)
+                assert best_p[0] is not None
+                goal_pos = best_p[1]
+            expert = PickAndPlaceExpert(goal_pos)
+
+        if self.picked_shape[0] == 'target':
+            shape = target_shapes[self.picked_shape[1]]
+        else:
+            assert self.picked_shape[0] == 'distractor'
+            shape = distractor_shapes[self.picked_shape[1]]
+
+        act_flags, done = expert.predict(robot, shape)
+        self.pick_and_place_expert[id] = None if done else expert
 
         action = self.env_method(id, 'flags_to_action', act_flags)
-
-        #input()
-
+        input()
         return action
 
 

@@ -71,7 +71,8 @@ class MatchRegionsEnv(BaseEnv, EzPickle):
                                                    self.rng,
                                                    current_hw=(target_h,
                                                                target_w),
-                                                   linf_bound=hw_bound)
+                                                   #linf_bound=hw_bound
+            )
         sensor = en.GoalRegion(target_x, target_y, target_h, target_w,
                                target_colour)
         self.add_entities([sensor])
@@ -178,15 +179,15 @@ class MatchRegionsEnv(BaseEnv, EzPickle):
                 pos_limits = rot_limits = None
             # randomise rotations of all entities but goal region
             rand_rot = [False] + [True] * (len(all_ents) - 1)
-
             geom.pm_randomise_all_poses(self._space,
                                         all_ents,
                                         self.ARENA_BOUNDS_LRBT,
                                         rng=self.rng,
                                         rand_pos=True,
                                         rand_rot=rand_rot,
-                                        rel_pos_linf_limits=pos_limits,
-                                        rel_rot_limits=rot_limits)
+                                        #rel_pos_linf_limits=pos_limits,
+                                        #rel_rot_limits=rot_limits
+            )
 
         # set up index for lookups
         self.__ent_index = en.EntityIndex(shape_ents)
@@ -215,12 +216,13 @@ class MatchRegionsEnv(BaseEnv, EzPickle):
 
     def get_state(self):
         state = argparse.Namespace()
+        state.robot = self.robot.get_state()
         state.target_shapes = []
         state.distractor_shapes = []
         for s in self.__target_shapes:
             state.target_shapes.append(s.get_state())
         for s in self.__distractor_shapes:
             state.distractor_shapes.append(s.get_state())
-        state.sensor = sensor.get_state()
+        state.sensor = self.__sensor_ref.get_state()
         return state
 

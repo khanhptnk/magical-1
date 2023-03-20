@@ -60,6 +60,7 @@ if __name__ == '__main__':
 
     config_file, more_flags = flags.parse()
     config = utils.make_config(config_file, more_flags)
+    print(config)
 
     train_env_id = '%s-%s-%s-v0' % \
         (config.env.name, config.env.train_cond, config.env.resolution)
