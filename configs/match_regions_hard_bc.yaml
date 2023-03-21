@@ -1,0 +1,21 @@
+name: 'match_regions_hard_bc'
+data_dir: 'data/match_regions'
+env:
+  name: MatchRegions
+  resolution: LoResCHW4E
+  train_cond: 'TestShapeLayout'
+  eval_cond: 'TestAllButDynamics'
+expert:
+  name: MatchRegionsExpert
+train:
+  n_iters: 10000
+  log_every: 100
+  batch_size: 5
+policy:
+  name: MagicalPolicy
+  lr: 0.0001
+  image_feat_dim: 256 
+  net_arch: [256]
+algorithm:
+  name: BehaviorCloning
+device: 0 
