@@ -31,12 +31,13 @@ class PickAndPlaceExpert:
 
     ANGLE_EPS = math.pi / 20
 
-    def __init__(self, goal_pos):
+    def __init__(self, goal_pos, dist_eps=0.05):
         self.goal_pos = goal_pos
         self.history = deque(maxlen=20)
         self.should_close = False
         self.shape_at_goal = False
         self.done = False
+        self.dist_eps = dist_eps
 
     def update_history(self, act_flags, robot_pos, robot_angle, robot_to_shape_dist):
         self.history.append({
@@ -93,7 +94,7 @@ class PickAndPlaceExpert:
 
             act_flags[2] = RA.CLOSE
             shape_to_goal_dist = goal_pos.get_distance(shape_pos)
-            if shape_to_goal_dist < 0.05:
+            if shape_to_goal_dist < self.dist_eps:
                 self.shape_at_goal = True
                 self.should_close = False
                 act_flags[0] = RA.DOWN

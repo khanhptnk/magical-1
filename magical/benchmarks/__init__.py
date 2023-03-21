@@ -659,6 +659,15 @@ def register_envs():
              'rand_dynamics': False,
          }),
         ('magical.benchmarks.match_regions:MatchRegionsEnv',
+         'MatchRegions-TestShapeLayout-v0', mr_ep_len, {
+             'rand_target_colour': False,
+             'rand_shape_type': True,
+             'rand_shape_count': False,
+             'rand_layout_minor': False,
+             'rand_layout_full': True,
+             'rand_dynamics': False,
+         }),
+        ('magical.benchmarks.match_regions:MatchRegionsEnv',
          'MatchRegions-TestJitter-v0', mr_ep_len, {
              'rand_target_colour': False,
              'rand_shape_type': False,

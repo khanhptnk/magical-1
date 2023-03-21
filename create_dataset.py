@@ -38,8 +38,8 @@ def create_set(name, env, expert, n_points):
                 action_seqs[i].append(a)
                 reward_seqs[i].append(r)
                 has_dones[i] |= d
-        print(rewards)
         total_reward.extend(rewards.tolist())
+        print(rewards, np.average(total_reward))
         for s, a_seq, r_seq in zip(init_states, action_seqs, reward_seqs):
             points.append(dict(id='%s_%d' % (name, id),
                                init_state=s,
@@ -79,7 +79,7 @@ if __name__ == '__main__':
                 (config.env.name, config.env.eval_cond, config.env.resolution)
 
     print('train env', env_id['train'])
-    assert env_id['train'] = env_id['val']
+    assert env_id['train'] == env_id['val']
     print('eval env', env_id['test'])
 
     env = {}

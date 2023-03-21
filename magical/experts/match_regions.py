@@ -71,6 +71,13 @@ class MatchRegionsExpert(BaseExpert):
         expert = self.pick_and_place_expert[id]
         picked_shape = self.picked_shape[id]
 
+        should_stop = True
+        for i, shape in enumerate(target_shapes):
+            if not self._is_inside(sensor, shape.position):
+                should_stop = False
+        if should_stop:
+            return 0
+
         if expert is None:
             picked_shape = None
             for i, shape in enumerate(distractor_shapes):
@@ -111,7 +118,7 @@ class MatchRegionsExpert(BaseExpert):
                             best_p = (d, p)
                 assert best_p[0] is not None
                 goal_pos = best_p[1]
-            expert = PickAndPlaceExpert(goal_pos)
+            expert = PickAndPlaceExpert(goal_pos, dist_eps=0.15)
 
         if picked_shape[0] == 'target':
             shape = target_shapes[picked_shape[1]]
