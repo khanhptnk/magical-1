@@ -638,7 +638,7 @@ def register_envs():
             }),
     ]
 
-    mr_ep_len = 120
+    mr_ep_len = 200
     match_regions_variants = [
         ('magical.benchmarks.match_regions:MatchRegionsEnv',
          'MatchRegions-Demo-v0', mr_ep_len, {

@@ -29,9 +29,11 @@ class BaseExpert(BasePolicy):
 
 class PickAndPlaceExpert:
 
+    ANGLE_EPS = math.pi / 20
+
     def __init__(self, goal_pos):
         self.goal_pos = goal_pos
-        self.history = deque(maxlen=10)
+        self.history = deque(maxlen=20)
         self.should_close = False
         self.shape_at_goal = False
         self.done = False
@@ -67,13 +69,11 @@ class PickAndPlaceExpert:
             while i >= 0 and history[i]['action'][0] == RA.DOWN:
                 cnt_down += 1
                 i -= 1
-            should_back_up = False
             # continue back up
             if cnt_down < 5:
                 act_flags[0] = RA.DOWN
             else:
                 self.done = True
-            print(cnt_down, self.done)
             self.update_history(act_flags, robot_pos, robot_angle, robot_to_shape_dist)
             return act_flags, self.done
 
@@ -86,6 +86,11 @@ class PickAndPlaceExpert:
                     self.should_close = True
 
         if self.should_close:
+
+            robot_to_shape_dist = robot_pos.get_distance(shape_pos)
+            if robot_to_shape_dist > 0.5:
+                return act_flags, True
+
             act_flags[2] = RA.CLOSE
             shape_to_goal_dist = goal_pos.get_distance(shape_pos)
             if shape_to_goal_dist < 0.05:
@@ -99,20 +104,24 @@ class PickAndPlaceExpert:
             shape_to_goal_vector = (goal_pos - shape_pos).normalized()
             diff_angle = robot_vector.get_angle_between(shape_to_goal_vector)
             target_dist = shape_to_goal_dist
+            angle_eps = self.ANGLE_EPS * 3
         else:
-            print(shape_pos)
             robot_to_shape_vector = (shape_pos - robot_pos).normalized()
             diff_angle = robot_vector.get_angle_between(robot_to_shape_vector)
             target_dist = robot_to_shape_dist
+            angle_eps = self.ANGLE_EPS
 
-        angle_eps = math.pi / 20
-
+        robot_to_goal_dist = robot_pos.get_distance(goal_pos)
         if abs(diff_angle) < angle_eps:
             act_flags[0] = RA.UP
+        elif self.should_close and robot_to_goal_dist < 0.2:
+            act_flags[0] = RA.DOWN
         elif diff_angle < 0 and diff_angle >= -math.pi:
             act_flags[1] = RA.RIGHT
         else:
             act_flags[1] = RA.LEFT
+
+        should_back_up = False
 
         cnt_down = 0
         i = len(history) - 1
@@ -120,13 +129,12 @@ class PickAndPlaceExpert:
             cnt_down += 1
             i -= 1
 
-        should_back_up = False
-
         # continue back up
         if cnt_down > 0 and cnt_down < 10:
             should_back_up = True
 
-        cnt_unmoved = 0
+        # not changing pose at all
+        cnt_unmoved_pose = 0
         i = len(history) - 1
         while i > 0:
             p1 = history[i]['robot_pos']
@@ -137,10 +145,25 @@ class PickAndPlaceExpert:
             da = abs(a1 - a2)
             if dp > 0.01 or da > 0.01:
                 break
+            cnt_unmoved_pose += 1
+            i -= 1
+
+        if cnt_unmoved_pose >= 3:
+            should_back_up = True
+
+        # not changing position
+        cnt_unmoved = 0
+        i = len(history) - 1
+        while i > 0:
+            p1 = history[i]['robot_pos']
+            p2 = history[i - 1]['robot_pos']
+            dp = p1.get_distance(p2)
+            if dp > 0.01:
+                break
             cnt_unmoved += 1
             i -= 1
 
-        if target_dist >= 0.3 and cnt_unmoved >= 3:
+        if cnt_unmoved >= 19:
             should_back_up = True
 
         if should_back_up:

@@ -3,6 +3,7 @@ import sys
 import json
 import gym
 
+import numpy as np
 import jsonargparse
 import pickle
 import flags
@@ -21,6 +22,7 @@ def create_set(name, env, expert, n_points):
     batch_size = env.num_envs
     assert n_points % batch_size == 0
     id = 0
+    total_reward = []
     for i in range(n_points // batch_size):
         print(name, i * batch_size)
         obs = env.reset()
@@ -37,12 +39,15 @@ def create_set(name, env, expert, n_points):
                 reward_seqs[i].append(r)
                 has_dones[i] |= d
         print(rewards)
+        total_reward.extend(rewards.tolist())
         for s, a_seq, r_seq in zip(init_states, action_seqs, reward_seqs):
             points.append(dict(id='%s_%d' % (name, id),
                                init_state=s,
                                actions=a_seq,
                                rewards=r_seq))
             id += 1
+
+    print(np.average(total_reward))
 
     return points
 
