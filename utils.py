@@ -167,10 +167,10 @@ def update_config(source, target):
         elif source[k] is not None:
             target[k] = source[k]
 
-def make_env(env_id, rank, config, **kwargs):
+def make_env(env_id, seed_offset, config, **kwargs):
     def _init():
         env = gym.make(env_id, config=config, **kwargs)
-        env.seed(config.seed + rank)
+        env.seed(config.seed + seed_offset)
         return env
     return _init
 

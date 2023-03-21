@@ -67,24 +67,37 @@ if __name__ == '__main__':
     config = utils.make_config(config_file, more_flags)
     print(config)
 
-    train_env_id = '%s-%s-%s-v0' % \
-        (config.env.name, config.env.train_cond, config.env.resolution)
-    eval_env_id = '%s-%s-%s-v0' % \
-        (config.env.name, config.env.eval_cond, config.env.resolution)
+    env_id = {}
+    splits = ['train', 'val', 'test']
 
-    print('train env', train_env_id)
-    print('eval env', eval_env_id)
+    for split in splits:
+        if split in ['train', 'val']:
+            env_id[split] = '%s-%s-%s-v0' % \
+                (config.env.name, config.env.train_cond, config.env.resolution)
+        else:
+            env_id[split] = '%s-%s-%s-v0' % \
+                (config.env.name, config.env.eval_cond, config.env.resolution)
 
-    train_env = SubprocVecEnv([utils.make_env(train_env_id, i, config)
-        for i in range(config.train.batch_size)])
-    eval_env = SubprocVecEnv([utils.make_env(eval_env_id, i, config)
-        for i in range(config.train.batch_size)])
+    print('train env', env_id['train'])
+    assert env_id['train'] = env_id['val']
+    print('eval env', env_id['test'])
 
-    expert = expert_factory.load(config, train_env.observation_space, train_env.action_space, None)
+    env = {}
+    seed_offset = 0
+    for split in splits:
+        env[split] = SubprocVecEnv([
+            utils.make_env(env_id[split], seed_offset, config)
+                for i in range(config.train.batch_size)])
+        seed_offset += config.train.batch_size
+
+    expert = expert_factory.load(config,
+                                 env['train'].observation_space,
+                                 env['train'].action_space,
+                                 None)
 
     data = {}
-    data['train'] = create_set('train', train_env, expert, config.dataset.n_train)
-    data['val']   = create_set('val', train_env, expert, config.dataset.n_eval)
-    data['test']  = create_set('test', eval_env, expert, config.dataset.n_eval)
+    data['train'] = create_set('train', env['train'], expert, config.dataset.n_train)
+    data['val']   = create_set('val', env['val'], expert, config.dataset.n_eval)
+    data['test']  = create_set('test', env['test'], expert, config.dataset.n_eval)
 
     save_all(data)
