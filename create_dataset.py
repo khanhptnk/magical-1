@@ -86,7 +86,7 @@ if __name__ == '__main__':
     seed_offset = 0
     for split in splits:
         env[split] = SubprocVecEnv([
-            utils.make_env(env_id[split], seed_offset, config)
+            utils.make_env(env_id[split], seed_offset + i, config)
                 for i in range(config.train.batch_size)])
         seed_offset += config.train.batch_size
 
