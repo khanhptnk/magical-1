@@ -309,7 +309,7 @@ class BaseEnv(gym.Env, abc.ABC):
 
         obs_dict_u8 = self.render(mode='rgb_array')
 
-        if self.config.eval_mode:
+        if self.config.debug_mode:
             self.render(mode='human')
 
         return obs_dict_u8, reward, done, info

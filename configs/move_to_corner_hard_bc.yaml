@@ -1,5 +1,5 @@
 name: 'move_to_corner_hard_bc'
-data_dir: 'data/move_to_corner_hard'
+data_dir: 'data/move_to_corner_hard_10k'
 env:
   name: MoveToCorner
   resolution: LoResCHW4E
@@ -11,6 +11,7 @@ train:
   n_iters: 10000
   log_every: 100
   batch_size: 5
+  save_every_leap: 0.1
 policy:
   name: MagicalPolicy
   lr: 0.0001

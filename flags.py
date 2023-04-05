@@ -11,7 +11,7 @@ def parse():
     parser.add_argument('-device', type=int)
     parser.add_argument('-eval_mode', type=int)
     parser.add_argument('-data_dir', type=str)
-    parser.add_argument('-use_wandb', type=int, default=1)
+    parser.add_argument('-use_wandb', type=int, default=0)
     parser.add_argument('-wandb_id', type=str)
 
     parser.add_argument('-env.resolution', type=str)

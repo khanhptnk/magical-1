@@ -30,6 +30,11 @@ class BaseAlgorithm:
             'val': -1e9,
             'test': -1e9
         }
+        next_best_rew = {
+            'train_val': 0,
+            'val': 0,
+            'test': 0
+        }
         max_videos = 5
         save_video_ids = defaultdict(set)
 
@@ -85,9 +90,19 @@ class BaseAlgorithm:
                             if not config.eval_mode:
                                 policy.save('%s/best_%s.ckpt' % (config.exp_dir, split))
 
+                        leap = config.train.save_every_leap
+                        if leap and avg_rew > next_best_rew[split]:
+                            while next_best_rew[split] < avg_rew:
+                                next_best_rew[split] += leap
+                            if not config.eval_mode:
+                                rew_str = str('%.2f' % avg_rew).replace('.', '_')
+                                policy.save('%s/new_leap_%s_%s.ckpt' % (config.exp_dir, split, rew_str))
+
+
                         wandb_stats[split + '_best_rew'] = best_rew[split]
 
                     policy.save('%s/last.ckpt' % config.exp_dir)
+                    policy.save('%s/model_%s_%s.ckpt' % (config.exp_dir, split, i))
 
                 if config.use_wandb:
                     wandb.log(wandb_stats)

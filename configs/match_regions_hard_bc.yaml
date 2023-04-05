@@ -1,5 +1,5 @@
 name: 'match_regions_hard_bc'
-data_dir: 'data/match_regions'
+data_dir: 'data/match_regions_hard'
 env:
   name: MatchRegions
   resolution: LoResCHW4E

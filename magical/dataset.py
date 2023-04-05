@@ -53,6 +53,9 @@ class DataSplit:
     def __len__(self):
         return len(self.data)
 
+    def shuffle(self):
+        self.random.shuffle(self.data)
+
     def random_item(self):
         return self.random.choice(self.data)
 

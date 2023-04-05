@@ -1,3 +1,4 @@
+import sys
 import argparse
 from gym.utils import EzPickle
 import numpy as np
@@ -47,7 +48,10 @@ class MoveToRegionEnv(BaseEnv, EzPickle):
                                             linf_bound=hw_bound)
                 goal_xyhw = (*goal_xyhw[:2], *sampled_hw)
         else:
-            goal_xyhw = (state.x, state.y, state.h, state.w)
+            goal_xyhw = (state.goal.position.x - state.goal.w / 2,
+                         state.goal.position.y + state.goal.h / 2,
+                         state.goal.h,
+                         state.goal.w)
 
         if state is None:
             # colour the goal region
@@ -57,7 +61,7 @@ class MoveToRegionEnv(BaseEnv, EzPickle):
             else:
                 goal_colour = DEFAULT_GOAL_COLOUR
         else:
-            goal_colour = state.colour_name
+            goal_colour = state.goal.colour_name
 
         # place the goal region
         assert len(goal_xyhw) == 4, goal_xyhw

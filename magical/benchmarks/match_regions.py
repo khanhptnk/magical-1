@@ -43,9 +43,15 @@ class MatchRegionsEnv(BaseEnv, EzPickle):
                 "be randomised"
 
     def on_reset(self):
+        state = self.init_state
         # make the robot
         robot_pos = np.asarray((-0.5, 0.1))
         robot_angle = -math.pi * 1.2
+
+        if state is not None:
+            robot_pos = state.robot.position
+            robot_angle = state.robot.angle
+
         # if necessary, robot pose is randomised below
         robot = self._make_robot(robot_pos, robot_angle)
 
@@ -73,6 +79,11 @@ class MatchRegionsEnv(BaseEnv, EzPickle):
                                                                target_w),
                                                    #linf_bound=hw_bound
             )
+        if state is not None:
+            target_x = state.sensor.position.x - state.sensor.w / 2
+            target_y = state.sensor.position.y + state.sensor.h / 2
+            target_h = state.sensor.h
+            target_w = state.sensor.w
         sensor = en.GoalRegion(target_x, target_y, target_h, target_w,
                                target_colour)
         self.add_entities([sensor])
@@ -142,6 +153,15 @@ class MatchRegionsEnv(BaseEnv, EzPickle):
             len(poses) == dcount
             for poses, dcount in zip(distractor_poses, distractor_counts))
 
+        if state is not None:
+            target_colour = state.target_shapes[0].colour
+            target_types = []
+            target_poses = []
+            for i in range(len(state.target_shapes)):
+                s = state.target_shapes[i]
+                target_types.append(s.type)
+                target_poses.append((s.position.x, s.position.y, s.angle))
+
         self.__target_shapes = [
             self._make_shape(shape_type=shape_type,
                              colour_name=target_colour,
@@ -150,6 +170,20 @@ class MatchRegionsEnv(BaseEnv, EzPickle):
             for shape_type, (shape_x, shape_y,
                              shape_angle) in zip(target_types, target_poses)
         ]
+
+        if state is not None:
+            distractor_colours = []
+            for s in state.distractor_shapes:
+                distractor_colours.append(s.colour)
+            distractor_colours = list(set(distractor_colours))
+            distractor_types = [[] for _ in range(len(distractor_colours))]
+            distractor_poses = [[] for _ in range(len(distractor_colours))]
+            for i, c in enumerate(distractor_colours):
+                for s in state.distractor_shapes:
+                    if s.colour == c:
+                        distractor_types[i].append(s.type)
+                        distractor_poses[i].append((s.position.x, s.position.y, s.angle))
+
         self.__distractor_shapes = []
         for dist_colour, dist_types, dist_poses \
                 in zip(distractor_colours, distractor_types, distractor_poses):

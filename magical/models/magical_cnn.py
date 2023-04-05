@@ -65,6 +65,7 @@ class MAGICALCNN(nn.Module):
                  dropout=None,
                  use_sn=False,
                  arch_str='MAGICALCNN-resnet-128',
+                 contain_flatten_layer=True,
                  contain_fc_layer=True,
                  ActivationCls=torch.nn.ReLU):
         super().__init__()
@@ -122,7 +123,9 @@ class MAGICALCNN(nn.Module):
             in_dim = layer_out_dim*w
         if 'resnet' in arch_str:
             conv_layers.append(conv2d_layer(in_dim, 32, 1))
-        conv_layers.append(nn.Flatten())
+
+        if contain_flatten_layer:
+            conv_layers.append(nn.Flatten())
 
         fc_layers = []
         if contain_fc_layer:
