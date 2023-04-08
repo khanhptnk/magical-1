@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import gym
+import cv2
 
 import numpy as np
 import jsonargparse
@@ -58,7 +59,8 @@ def rollout(expert, env):
     ob = env.reset()
     expert.reset(env)
 
-    batch_size = len(batch)
+    batch_size = env.num_envs
+
     has_done = [False] * batch_size
     rewards = [[] for _ in range(batch_size)]
     states = [[] for _ in range(batch_size)]
@@ -122,13 +124,13 @@ def create_set(name, env, expert, n_points):
         print(name, i * batch_size)
         more_trajs, more_total_reward = rollout(expert, env)
         total_reward.extend(more_total_reward)
-        print(rewards, np.average(total_reward))
+        print(np.average(total_reward))
 
         for t in more_trajs:
             t['id'] = '%s_%d' % (name, id)
             trajs.append(t)
 
-    print(np.average(total_reward))
+    print('Finished', name, len(trajs), np.average(total_reward))
 
     return trajs
 
@@ -137,7 +139,7 @@ def save_all(data):
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
     for split in SPLITS:
-        path = '%s/%s.json' % (data_dir, split)
+        path = '%s/%s.pkl' % (data_dir, split)
         with open(path, 'wb') as f:
             pickle.dump(data[split], f, pickle.HIGHEST_PROTOCOL)
         print('Saved %s data with %d examples to %s' % (split, len(data[split]), path))
