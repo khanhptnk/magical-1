@@ -177,3 +177,6 @@ def make_env(env_id, seed_offset, config, **kwargs):
 
 def hwc_to_chw(img):
     return img.transpose((2, 0, 1))
+
+def print_float_array(arr):
+    print(['%.4f' % x for x in arr])

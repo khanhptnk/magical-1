@@ -26,6 +26,7 @@ from stable_baselines3.common.torch_layers import (
     get_actor_critic_arch,
 )
 
+
 class MagicalPolicy(BasePolicy):
 
     def __init__(self,
