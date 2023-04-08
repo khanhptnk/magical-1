@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 import magical.experts as expert_factory
@@ -11,46 +12,30 @@ class BehaviorCloning(BaseAlgorithm):
         super().__init__(config)
         self.loss_fn = torch.nn.CrossEntropyLoss(ignore_index=-1, reduction='sum')
 
-    def _add_ref_actions(self, actions, action, done):
-        new_action = [-1 if done[i] else a for i, a in enumerate(action)]
-        actions.append(torch.tensor(new_action).to(self.device))
-
-    def train_episode(self, i_iter, policy, env, batch):
+    def train_episode(self, i_iter, policy, not_used_env, batch):
+        ob_iter = []
         ref_action_iter = []
         for i, item in enumerate(batch):
-            # set initial state for environments before reset()
-            env.env_method('set_init_state', item['init_state'], indices=[i])
+            ob_iter.append(iter(item['observations']))
             ref_action_iter.append(iter(item['actions']))
-        ob = env.reset()
         policy.reset(is_eval=False)
 
         batch_size = len(batch)
-        has_done = [False] * batch_size
-        total_reward = [0] * batch_size
-        num_steps = [0] * batch_size
 
         ref_actions = []
         logits = []
 
-        while not all(has_done):
+        n_steps = len(batch[0]['actions'])
+        for _ in range(n_steps):
+            ob = np.stack([next(o) for o in ob_iter])
             ref_action = [next(x) for x in ref_action_iter]
-            self._add_ref_actions(ref_actions, ref_action, has_done)
+            ref_actions.append(torch.tensor(ref_action).to(self.device))
             action, logit = policy.forward(ob, deterministic=True)
             logits.append(logit)
 
-            ob, reward, done, info = env.step(ref_action)
-
-            for i, (r, d) in enumerate(zip(reward, done)):
-                total_reward[i] += r
-                if not has_done[i]:
-                    num_steps[i] += 1
-                has_done[i] |= d
-
         loss = self.update_policy(policy, logits, ref_actions)
 
-        return dict(loss=loss,
-                    rewards=total_reward,
-                    num_steps=num_steps)
+        return dict(loss=loss)
 
     def update_policy(self, policy, logits, ref_actions):
 

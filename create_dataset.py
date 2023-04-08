@@ -69,12 +69,8 @@ def rollout(expert, env):
     ids = list(range(batch_size))
 
     state = env.env_method('get_state', indices=ids)
-    view_dict = env.env_method('render', mode='rgb_array')
     for i in range(batch_size):
-        img = view_dict[i]['allo']
-        img = cv2.resize(img, (96, 96), interpolation=cv2.INTER_AREA)
-        img = img.transpose((2, 0, 1))
-        observations[i].append(img)
+        observations[i].append(ob[i])
         states.append(state[i])
 
     cnt = 0
@@ -85,18 +81,13 @@ def rollout(expert, env):
         ob, reward, done, info = env.step(action)
 
         view_dict = env.env_method('render', mode='rgb_array')
-
         state = env.env_method('get_state', indices=ids)
         for i in range(batch_size):
-            img = view_dict[i]['allo']
-            img = cv2.resize(img, (96, 96), interpolation=cv2.INTER_AREA)
-            img = img.transpose((2, 0, 1))
-            observations[i].append(img)
-            states.append(state[i])
-            actions.append(action[i])
+            observations[i].append(ob[i])
+            states[i].append(state[i])
+            actions[i].append(action[i])
             rewards[i].append(reward[i])
             has_done[i] |= done[i]
-
         cnt += 1
 
     trajs = [None] * batch_size
@@ -124,7 +115,7 @@ def create_set(name, env, expert, n_points):
         print(name, i * batch_size)
         more_trajs, more_total_reward = rollout(expert, env)
         total_reward.extend(more_total_reward)
-        print(np.average(total_reward))
+        print(more_total_reward, np.average(more_total_reward))
 
         for t in more_trajs:
             t['id'] = '%s_%d' % (name, id)

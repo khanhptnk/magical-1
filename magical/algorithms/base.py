@@ -120,8 +120,9 @@ class BaseAlgorithm:
             frames['allo'].append(utils.hwc_to_chw(frame['allo']))
             frames['robot_' + view].append(utils.hwc_to_chw(frame[view]))
 
+        # set initial states in batch to environments
         for i, item in enumerate(batch):
-            env.env_method('set_init_state', item['init_state'], indices=[i])
+            env.env_method('set_init_state', item['states'][0], indices=[i])
         ob = env.reset()
         policy.reset(is_eval=True)
 

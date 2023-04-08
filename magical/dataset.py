@@ -34,7 +34,7 @@ class Dataset:
 
     def _load_data(self, split):
 
-        file_name = os.path.join(self.data_dir, self.prefix + split + '.json')
+        file_name = os.path.join(self.data_dir, self.prefix + split + '.pkl')
 
         with open(file_name, 'rb') as f:
             data = pickle.load(f)
