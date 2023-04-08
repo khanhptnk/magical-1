@@ -3,6 +3,7 @@ import sys
 import json
 import gym
 import cv2
+from pprint import pprint
 
 import numpy as np
 import jsonargparse
@@ -71,7 +72,7 @@ def rollout(expert, env):
     state = env.env_method('get_state', indices=ids)
     for i in range(batch_size):
         observations[i].append(ob[i])
-        states.append(state[i])
+        states[i].append(state[i])
 
     cnt = 0
     while not all(has_done):
@@ -98,6 +99,23 @@ def rollout(expert, env):
             'states': states[i],
             'rewards': rewards[i]
         }
+
+    ### re-run actions
+    for i in range(batch_size):
+        env.env_method('set_init_state', trajs[i]['states'][0], indices=[i])
+    ob = env.reset()
+    state = env.env_method('get_state', indices=[0])
+
+    has_done = [False] * batch_size
+    rewards = [[] for _ in range(batch_size)]
+    cnt = 0
+    while not all(has_done):
+        action = [trajs[i]['actions'][cnt] for i in range(batch_size)]
+        ob, reward, done, info = env.step(action)
+        for i in range(batch_size):
+            rewards[i].append(reward[i])
+            has_done[i] |= done[i]
+        cnt += 1
 
     total_reward = [r[-1] for r in rewards]
 

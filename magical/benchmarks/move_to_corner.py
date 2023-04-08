@@ -47,18 +47,18 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
             shape_angle = 0.13 * math.pi
             shape_colour = 'red'
             shape_type = en.ShapeType.SQUARE
+
+            if self.rand_shape_colour:
+                shape_colour = self.rng.choice(
+                    np.asarray(en.SHAPE_COLOURS, dtype='object'))
+            if self.rand_shape_type:
+                shape_type = self.rng.choice(
+                    np.asarray(en.SHAPE_TYPES, dtype='object'))
         else:
             shape_pos = state.shape.position
             shape_angle = state.shape.angle
             shape_colour = state.shape.colour
             shape_type = state.shape.type
-
-        if self.rand_shape_colour:
-            shape_colour = self.rng.choice(
-                np.asarray(en.SHAPE_COLOURS, dtype='object'))
-        if self.rand_shape_type:
-            shape_type = self.rng.choice(
-                np.asarray(en.SHAPE_TYPES, dtype='object'))
 
         shape = self._make_shape(shape_type=shape_type,
                                  colour_name=shape_colour,
@@ -67,7 +67,7 @@ class MoveToCornerEnv(BaseEnv, EzPickle):
         self.add_entities([shape])
         self.__shape_ref = shape
 
-        if self.rand_poses:
+        if state is None and self.rand_poses:
             geom.pm_randomise_all_poses(
                 self._space, (self._robot, self.__shape_ref),
                 self.ARENA_BOUNDS_LRBT,

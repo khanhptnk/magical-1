@@ -122,10 +122,6 @@ def setup(yaml_file_or_str, flags=None):
     else:
         log_file = os.path.join(config.exp_dir, 'train.log')
     configure_logging(log_file)
-    logging.info('python -u ' + ' '.join(sys.argv))
-    logging.info(str(datetime.now()))
-    logging.info('Write log to %s' % log_file)
-    logging.info(str(config))
 
     if config.eval_mode:
         config.use_wandb = 0
@@ -138,6 +134,11 @@ def setup(yaml_file_or_str, flags=None):
             id=config.wandb_id,
             config=config.to_dict()
         )
+
+    logging.info('python -u ' + ' '.join(sys.argv))
+    logging.info(str(datetime.now()))
+    logging.info('Write log to %s' % log_file)
+    logging.info(str(config))
 
     return config
 

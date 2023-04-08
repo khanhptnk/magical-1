@@ -143,6 +143,7 @@ class BaseAlgorithm:
         cnt = 0
         while not all(has_done):
             action, _ = policy.predict(ob, deterministic=True)
+
             ob, reward, done, info = env.step(action)
 
             for (i, _), v in video_frames.items():

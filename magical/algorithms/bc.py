@@ -30,7 +30,7 @@ class BehaviorCloning(BaseAlgorithm):
             ob = np.stack([next(o) for o in ob_iter])
             ref_action = [next(x) for x in ref_action_iter]
             ref_actions.append(torch.tensor(ref_action).to(self.device))
-            action, logit = policy.forward(ob, deterministic=True)
+            _, logit = policy.forward(ob, deterministic=True)
             logits.append(logit)
 
         loss = self.update_policy(policy, logits, ref_actions)
