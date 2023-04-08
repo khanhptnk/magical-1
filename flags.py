@@ -13,6 +13,7 @@ def parse():
     parser.add_argument('-data_dir', type=str)
     parser.add_argument('-use_wandb', type=int, default=0)
     parser.add_argument('-wandb_id', type=str)
+    parser.add_argument('-debug_mode', type=int, default=0)
 
     parser.add_argument('-env.resolution', type=str)
     parser.add_argument('-env.view', type=str)
