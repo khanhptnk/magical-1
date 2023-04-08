@@ -9,15 +9,18 @@ import numpy as np
 
 class Dataset:
 
-    def __init__(self, config, splits=['train', 'val', 'test'], seed=None):
+    def __init__(self, config, splits=['train', 'val', 'test'], prefix='', data_split_cls=None, seed=None):
 
         self.random = random.Random(seed)
         self.config = config
         self.data = {}
         self.data_dir = config.data_dir
         self.splits = splits
+        self.prefix = prefix
+
+        data_split_cls = data_split_cls or DataSplit
         for split in splits:
-            self.data[split] = DataSplit(self._load_data(split), seed=seed)
+            self.data[split] = data_split_cls(self._load_data(split), seed=seed)
             if split == 'train':
                 if self.config.train_subset:
                     self.data[split] = self.data[split][:self.config.train_subset]
@@ -31,7 +34,7 @@ class Dataset:
 
     def _load_data(self, split):
 
-        file_name = os.path.join(self.data_dir, split + '.json')
+        file_name = os.path.join(self.data_dir, self.prefix + split + '.json')
 
         with open(file_name, 'rb') as f:
             data = pickle.load(f)
@@ -84,3 +87,12 @@ class DataSplit:
             if not cycle and self.idx == 0:
                 break
 
+
+class VAEDataSplit(DataSplit):
+
+    def __init__(self, data, seed=None):
+
+        new_data = []
+        for item in data:
+            new_data.extend(item['observations'])
+        super().__init__(new_data, seed=seed)

@@ -17,6 +17,7 @@ import magical.experts as expert_factory
 
 SPLITS = ['train', 'val', 'test']
 
+"""
 def create_set(name, env, expert, n_points):
     points = []
     batch_size = env.num_envs
@@ -50,6 +51,86 @@ def create_set(name, env, expert, n_points):
     print(np.average(total_reward))
 
     return points
+"""
+
+def rollout(expert, env):
+
+    ob = env.reset()
+    expert.reset(env)
+
+    batch_size = len(batch)
+    has_done = [False] * batch_size
+    rewards = [[] for _ in range(batch_size)]
+    states = [[] for _ in range(batch_size)]
+    observations = [[] for _ in range(batch_size)]
+    actions = [[] for _ in range(batch_size)]
+    ids = list(range(batch_size))
+
+    state = env.env_method('get_state', indices=ids)
+    view_dict = env.env_method('render', mode='rgb_array')
+    for i in range(batch_size):
+        img = view_dict[i]['allo']
+        img = cv2.resize(img, (96, 96), interpolation=cv2.INTER_AREA)
+        img = img.transpose((2, 0, 1))
+        observations[i].append(img)
+        states.append(state[i])
+
+    cnt = 0
+    while not all(has_done):
+
+        # sample action instead of taking argmax
+        action = expert.predict(ob)
+        ob, reward, done, info = env.step(action)
+
+        view_dict = env.env_method('render', mode='rgb_array')
+
+        state = env.env_method('get_state', indices=ids)
+        for i in range(batch_size):
+            img = view_dict[i]['allo']
+            img = cv2.resize(img, (96, 96), interpolation=cv2.INTER_AREA)
+            img = img.transpose((2, 0, 1))
+            observations[i].append(img)
+            states.append(state[i])
+            actions.append(action[i])
+            rewards[i].append(reward[i])
+            has_done[i] |= done[i]
+
+        cnt += 1
+
+    trajs = [None] * batch_size
+    for i in range(batch_size):
+        trajs[i] = {
+            'observations': observations[i],
+            'actions': actions[i],
+            'states': states[i],
+            'rewards': rewards[i]
+        }
+
+    total_reward = [r[-1] for r in rewards]
+
+    return trajs, total_reward
+
+
+def create_set(name, env, expert, n_points):
+
+    trajs = []
+    batch_size = env.num_envs
+    assert n_points % batch_size == 0
+    id = 0
+    total_reward = []
+    for i in range(n_points // batch_size):
+        print(name, i * batch_size)
+        more_trajs, more_total_reward = rollout(expert, env)
+        total_reward.extend(more_total_reward)
+        print(rewards, np.average(total_reward))
+
+        for t in more_trajs:
+            t['id'] = '%s_%d' % (name, id)
+            trajs.append(t)
+
+    print(np.average(total_reward))
+
+    return trajs
 
 def save_all(data):
     data_dir = config.data_dir
@@ -86,7 +167,7 @@ if __name__ == '__main__':
     seed_offset = 0
     for split in splits:
         env[split] = SubprocVecEnv([
-            utils.make_env(env_id[split], seed_offset, config)
+            utils.make_env(env_id[split], seed_offset + i, config)
                 for i in range(config.train.batch_size)])
         seed_offset += config.train.batch_size
 
