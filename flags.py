@@ -29,6 +29,8 @@ def parse():
     parser.add_argument('-dataset.n_eval', type=int, default=100)
     parser.add_argument('-dataset.points_per_part', type=int)
 
+    parser.add_argument('-dvae_dataset.trajs_per_model', type=int)
+
     flags = parser.parse_args()
 
     return flags.config, jsonargparse.namespace_to_dict(flags)

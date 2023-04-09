@@ -53,15 +53,13 @@ def rollout(batch, policy, env):
         states[i].append(state[i])
 
     cnt = 0
-    print('DEBUG!!! change deterministic to False')
+    #print('DEBUG!!! change deterministic to False')
     while not all(has_done):
-
         # sample action instead of taking argmax
-        action, _ = policy.predict(ob, deterministic=True)
+        action, _ = policy.predict(ob, deterministic=False)
         ob, reward, done, info = env.step(action)
 
         view_dict = env.env_method('render', mode='rgb_array')
-
         state = env.env_method('get_state', indices=ids)
         for i in range(batch_size):
             observations[i].append(_resize_and_format_image(view_dict[i]['allo']))
@@ -96,7 +94,7 @@ def save_all(data):
             pickle.dump(data[split], f, pickle.HIGHEST_PROTOCOL)
         print('Saved %s data with %d examples to %s' % (split, len(data[split]), path))
 
-def make_trajs(data_split, policy, env, max_trajs=10):
+def make_trajs(data_split, policy, env, max_trajs=5):
     total_reward = []
     trajs = []
     data_split.shuffle()
@@ -104,7 +102,8 @@ def make_trajs(data_split, policy, env, max_trajs=10):
         batch_size=config.train.batch_size, cycle=False)
     trajs = []
     for batch in data_iter:
-        new_trajs, new_rew = rollout(batch, policy, env)
+        with torch.no_grad():
+            new_trajs, new_rew = rollout(batch, policy, env)
         trajs.extend(new_trajs)
         total_reward.extend(new_rew)
         if len(trajs) >= max_trajs:
@@ -137,9 +136,10 @@ if __name__ == '__main__':
     for it in model_iters:
         model_path = '%s/model_test_%d.ckpt' % (config.exp_dir, it)
         policy.load(model_path)
-        print(model_path)
-        trajs.extend(make_trajs(dataset['train'], policy, env))
-        trajs.extend(make_trajs(dataset['test'], policy, env))
+        trajs.extend(make_trajs(
+            dataset['train'], policy, env, max_trajs=config.dvae_dataset.trajs_per_model))
+        trajs.extend(make_trajs(
+            dataset['test'], policy, env, max_trajs=config.dvae_dataset.trajs_per_model))
         print(len(trajs))
 
     random.shuffle(trajs)

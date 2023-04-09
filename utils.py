@@ -122,7 +122,7 @@ def setup(yaml_file_or_str, flags=None):
         log_file = os.path.join(config.exp_dir, 'eval.log')
     else:
         # avoid overwrite train.log
-        assert 'train' in ('python -u ' + ' '.join(sys.argv)))
+        assert 'train' in ('python -u ' + ' '.join(sys.argv))
         log_file = os.path.join(config.exp_dir, 'train.log')
 
     configure_logging(log_file)
