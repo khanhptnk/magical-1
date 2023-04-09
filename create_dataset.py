@@ -122,13 +122,15 @@ def rollout(expert, env):
     return trajs, total_reward
 
 
-def create_set(name, env, expert, n_points):
+def create_set(name, env, expert, n_points, points_per_part=None):
 
     trajs = []
     batch_size = env.num_envs
     assert n_points % batch_size == 0
     id = 0
     total_reward = []
+    part = 0
+    total_trajs = 0
     for i in range(n_points // batch_size):
         print(name, i * batch_size)
         more_trajs, more_total_reward = rollout(expert, env)
@@ -139,19 +141,28 @@ def create_set(name, env, expert, n_points):
             t['id'] = '%s_%d' % (name, id)
             trajs.append(t)
 
-    print('Finished', name, len(trajs), np.average(total_reward))
+        if points_per_part is not None and len(trajs) >= points_per_part:
+            save_all(trajs, name, part=part)
+            part += 1
+            total_trajs += len(trajs)
+            trajs = []
+
+    if points_per_part is None:
+        save_all(trajs, name)
+        total_trajs = len(trajs)
+
+    print('Finished', name, total_trajs, np.average(total_reward))
 
     return trajs
 
-def save_all(data):
-    data_dir = config.data_dir
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-    for split in SPLITS:
+def save_all(data, split, part=None):
+    if part is None:
         path = '%s/%s.pkl' % (data_dir, split)
-        with open(path, 'wb') as f:
-            pickle.dump(data[split], f, pickle.HIGHEST_PROTOCOL)
-        print('Saved %s data with %d examples to %s' % (split, len(data[split]), path))
+    else:
+        path = '%s/%s_%s.pkl' % (data_dir, split, str(part))
+    with open(path, 'wb') as f:
+        pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+    print('Saved %s data with %d examples to %s' % (split, len(data), path))
 
 if __name__ == '__main__':
 
@@ -187,9 +198,14 @@ if __name__ == '__main__':
                                  env['train'].action_space,
                                  None)
 
+    data_dir = config.data_dir
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+        print('Create data directory %s' % data_dir)
+
     data = {}
-    data['train'] = create_set('train', env['train'], expert, config.dataset.n_train)
+    data['train'] = create_set(
+        'train', env['train'], expert, config.dataset.n_train, points_per_part=config.dataset.points_per_part)
     data['val']   = create_set('val', env['val'], expert, config.dataset.n_eval)
     data['test']  = create_set('test', env['test'], expert, config.dataset.n_eval)
 
-    save_all(data)

@@ -27,6 +27,7 @@ def parse():
 
     parser.add_argument('-dataset.n_train', type=int, default=1000)
     parser.add_argument('-dataset.n_eval', type=int, default=100)
+    parser.add_argument('-dataset.points_per_part', type=int)
 
     flags = parser.parse_args()
 
