@@ -293,7 +293,7 @@ class BaseEnv(gym.Env, abc.ABC):
         if self.max_episode_steps is not None:
             done = done or self._episode_steps >= self.max_episode_steps
         if done:
-            # set initial to be None
+            # set initial state to be None
             self.set_init_state(None)
             # get final reward
             reward = eval_score = self.score_on_end_of_traj()
