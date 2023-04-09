@@ -117,10 +117,14 @@ def setup(yaml_file_or_str, flags=None):
     config.device = torch.device('cuda:%d' % config.device)
 
     config.start_time = time.time()
+
     if config.eval_mode:
         log_file = os.path.join(config.exp_dir, 'eval.log')
     else:
+        # avoid overwrite train.log
+        assert 'train' in ('python -u ' + ' '.join(sys.argv)))
         log_file = os.path.join(config.exp_dir, 'train.log')
+
     configure_logging(log_file)
 
     if config.eval_mode:
