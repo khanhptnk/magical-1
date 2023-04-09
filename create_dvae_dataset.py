@@ -12,6 +12,8 @@ import flags
 import utils
 import cv2
 
+import torch
+
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 import magical
@@ -115,6 +117,10 @@ if __name__ == '__main__':
     config_file, more_flags = flags.parse()
     config = utils.make_config(config_file, more_flags)
     config.exp_dir = "%s/%s" % (config.exp_root_dir, config.name)
+
+    torch.manual_seed(config.seed)
+    np.random.seed(config.seed)
+    random.seed(config.seed)
 
     dataset = Dataset(config, seed=config.seed)
 
