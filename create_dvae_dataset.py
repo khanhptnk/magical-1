@@ -25,8 +25,13 @@ SPLITS = ['train', 'val']
 
 def rollout(batch, policy, env):
 
+    def _resize_and_format_image(img):
+        img = cv2.resize(img, (96, 96), interpolation=cv2.INTER_AREA)
+        img = img.transpose((2, 0, 1))
+        return img
+
     for i, item in enumerate(batch):
-        env.env_method('set_init_state', item['init_state'], indices=[i])
+        env.env_method('set_init_state', item['states'][0], indices=[i])
 
     ob = env.reset()
     policy.reset(is_eval=True)
@@ -42,11 +47,8 @@ def rollout(batch, policy, env):
     state = env.env_method('get_state', indices=ids)
     view_dict = env.env_method('render', mode='rgb_array')
     for i in range(batch_size):
-        img = view_dict[i]['allo']
-        img = cv2.resize(img, (96, 96), interpolation=cv2.INTER_AREA)
-        img = img.transpose((2, 0, 1))
-        observations[i].append(img)
-        states.append(state[i])
+        observations[i].append(_resize_and_format_image(view_dict[i]['allo']))
+        states[i].append(state[i])
 
     cnt = 0
     print('DEBUG!!! change deterministic to False')
@@ -60,10 +62,7 @@ def rollout(batch, policy, env):
 
         state = env.env_method('get_state', indices=ids)
         for i in range(batch_size):
-            img = view_dict[i]['allo']
-            img = cv2.resize(img, (96, 96), interpolation=cv2.INTER_AREA)
-            img = img.transpose((2, 0, 1))
-            observations[i].append(img)
+            observations[i].append(_resize_and_format_image(view_dict[i]['allo']))
             states[i].append(state[i])
             actions[i].append(action[i])
             rewards[i].append(reward[i])
@@ -117,7 +116,6 @@ if __name__ == '__main__':
     config = utils.make_config(config_file, more_flags)
     config.exp_dir = "%s/%s" % (config.exp_root_dir, config.name)
 
-    print(config)
     dataset = Dataset(config, seed=config.seed)
 
     env_id = '%s-Demo-%s-v0' % \
@@ -133,7 +131,7 @@ if __name__ == '__main__':
         features_extractor_kwargs={},
     ).to(config.device)
 
-    model_iters = [0, 50, 100, 150, 300, 600, 1500, 3000]
+    model_iters = [0, 100, 200, 500, 800, 1500, 3000]
     trajs = []
     for it in model_iters:
         model_path = '%s/model_test_%d.ckpt' % (config.exp_dir, it)
