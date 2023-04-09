@@ -91,7 +91,7 @@ def save_all(data):
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
     for split in SPLITS:
-        path = '%s/dvae_%s.json' % (data_dir, split)
+        path = '%s/dvae_%s.pkl' % (data_dir, split)
         with open(path, 'wb') as f:
             pickle.dump(data[split], f, pickle.HIGHEST_PROTOCOL)
         print('Saved %s data with %d examples to %s' % (split, len(data[split]), path))
