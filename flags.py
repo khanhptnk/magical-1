@@ -18,6 +18,7 @@ def parse():
     parser.add_argument('-env.resolution', type=str)
     parser.add_argument('-env.view', type=str)
 
+    parser.add_argument('-train.lr', type=float)
     parser.add_argument('-train.log_every', type=int)
     parser.add_argument('-train.batch_size', type=int)
     parser.add_argument('-train.eval_split', type=str)
@@ -30,6 +31,11 @@ def parse():
     parser.add_argument('-dataset.points_per_part', type=int)
 
     parser.add_argument('-dvae_dataset.trajs_per_model', type=int)
+    parser.add_argument('-dvae.num_tokens', type=int)
+    parser.add_argument('-dvae.codebook_dim', type=int)
+    parser.add_argument('-dvae.hidden_dim', type=int)
+    parser.add_argument('-dvae.max_kl_weight', type=float)
+    parser.add_argument('-dvae.max_temp', type=float)
 
     flags = parser.parse_args()
 

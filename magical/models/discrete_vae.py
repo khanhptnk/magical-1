@@ -8,6 +8,7 @@
 # https://github.com/openai/DALL-E
 # https://github.com/lucidrains/DALLE-pytorch
 # --------------------------------------------------------'
+import math
 from math import sqrt
 import os
 import torch
@@ -161,9 +162,12 @@ class DiscreteVAE(BasicVAE):
         return_loss = False,
         return_recons = False,
         return_logits = False,
-        temp = None
+        temp = None,
+        kl_div_loss_weight = None,
+        debug = None,
     ):
-        device, num_tokens, image_size, kl_div_loss_weight = img.device, self.num_tokens, self.image_size, self.kl_div_loss_weight
+        device, num_tokens, image_size = img.device, self.num_tokens, self.image_size
+
         assert img.shape[-1] == image_size and img.shape[-2] == image_size, f'input must have the correct image size {image_size}'
 
         logits = self.encoder(img)
@@ -172,7 +176,16 @@ class DiscreteVAE(BasicVAE):
             return logits # return logits for getting hard image indices for DALL-E training
 
         temp = default(temp, self.temperature)
+        kl_div_loss_weight = default(kl_div_loss_weight, self.kl_div_loss_weight)
         soft_one_hot = F.gumbel_softmax(logits, tau = temp, dim = 1, hard = self.straight_through)
+
+        if debug:
+            tmp = logits.argmax(dim=1)
+            print('logit argmax', tmp.sum().item())
+            tmp = soft_one_hot.argmax(dim=1)
+            print('one hot argmax', tmp.sum().item())
+
+        #print(logits.shape, soft_one_hot.shape)
         sampled = einsum('b n h w, n d -> b d h w', soft_one_hot, self.codebook.weight)
         out = self.decoder(sampled)
 

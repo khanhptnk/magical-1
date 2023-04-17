@@ -5,6 +5,12 @@ env:
   resolution: LoResCHW4E
   train_cond: 'TestJitter'
   eval_cond: 'TestAllButDynamics'
+dvae:
+  num_tokens: 64
+  codebook_dim: 128
+  hidden_dim: 64
+  max_kl_weight: 0
+  max_temp: 2
 train:
   n_iters: 100000
   log_every: 100

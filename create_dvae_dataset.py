@@ -80,7 +80,7 @@ def rollout(batch, policy, env):
         }
 
     total_reward = [r[-1] for r in rewards]
-    #print(total_reward)
+    print(total_reward)
 
     return trajs, total_reward
 
