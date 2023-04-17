@@ -25,7 +25,7 @@ from magical.models import MAGICALNet, MAGICALCNN
 
 SPLITS = ['train', 'val']
 
-def rollout(batch, policy, env):
+def rollout(batch, policy, env, split, model_iter):
 
     def _resize_and_format_image(img):
         img = cv2.resize(img, (96, 96), interpolation=cv2.INTER_AREA)
@@ -53,7 +53,6 @@ def rollout(batch, policy, env):
         states[i].append(state[i])
 
     cnt = 0
-    #print('DEBUG!!! change deterministic to False')
     while not all(has_done):
         # sample action instead of taking argmax
         action, _ = policy.predict(ob, deterministic=False)
@@ -70,9 +69,13 @@ def rollout(batch, policy, env):
 
         cnt += 1
 
+    print(model_iter)
+
     trajs = [None] * batch_size
     for i in range(batch_size):
         trajs[i] = {
+            'split': split,
+            'model': model_iter,
             'observations': observations[i],
             'actions': actions[i],
             'states': states[i],
@@ -94,16 +97,17 @@ def save_all(data):
             pickle.dump(data[split], f, pickle.HIGHEST_PROTOCOL)
         print('Saved %s data with %d examples to %s' % (split, len(data[split]), path))
 
-def make_trajs(data_split, policy, env, max_trajs=5):
+def make_trajs(split, model_iter, dataset, policy, env, max_trajs=5):
     total_reward = []
     trajs = []
+    data_split = data[split]
     data_split.shuffle()
     data_iter = data_split.iterate_batches(
         batch_size=config.train.batch_size, cycle=False)
     trajs = []
     for batch in data_iter:
         with torch.no_grad():
-            new_trajs, new_rew = rollout(batch, policy, env)
+            new_trajs, new_rew = rollout(batch, policy, env, split, model_iter)
         trajs.extend(new_trajs)
         total_reward.extend(new_rew)
         if len(trajs) >= max_trajs:
@@ -137,9 +141,21 @@ if __name__ == '__main__':
         model_path = '%s/model_test_%d.ckpt' % (config.exp_dir, it)
         policy.load(model_path)
         trajs.extend(make_trajs(
-            dataset['train'], policy, env, max_trajs=config.dvae_dataset.trajs_per_model))
+            'train',
+            it,
+            dataset,
+            policy,
+            env,
+            max_trajs=config.dvae_dataset.trajs_per_model)
+        )
         trajs.extend(make_trajs(
-            dataset['test'], policy, env, max_trajs=config.dvae_dataset.trajs_per_model))
+            'test',
+            it,
+            dataset,
+            policy,
+            env,
+            max_trajs=config.dvae_dataset.trajs_per_model)
+        )
         print(len(trajs))
 
     random.shuffle(trajs)
